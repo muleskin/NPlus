@@ -1,6 +1,8 @@
 ﻿using ScintillaNET;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
@@ -18,6 +20,13 @@ namespace nplus
         private Button btnFindNext, btnCount, btnReplace, btnReplaceAll, btnClose;
         private Button btnMarkAll, btnClearMarks, btnCopyMarked;
         private Label lblStatus;
+
+        // Find in Files controls
+        private ComboBox txtFifFind, txtFifReplace, txtFifFilter;
+        private ComboBox txtFifDirectory;
+        private CheckBox chkFifMatchCase, chkFifWholeWord, chkFifSubFolders, chkFifHidden;
+        private RadioButton radFifNormal, radFifExtended, radFifRegex;
+        private Button btnFifFindAll, btnFifReplaceAll, btnFifClose, btnFifBrowse;
 
         private const int MaxHistory = 20;
         private List<string> _findHistory = new List<string>();
@@ -47,7 +56,7 @@ namespace nplus
 
         public void SetMode(int tabIndex)
         {
-            if (tabIndex >= 0 && tabIndex <= 2)
+            if (tabIndex >= 0 && tabIndex <= 3)
             {
                 tabControl.SelectedIndex = tabIndex;
             }
@@ -57,6 +66,15 @@ namespace nplus
             if (editor != null && editor.SelectedText.Length > 0 && editor.SelectedText.Length < 500 && !editor.SelectedText.Contains("\n"))
             {
                 txtFind.Text = editor.SelectedText;
+                txtFifFind.Text = editor.SelectedText;
+            }
+
+            // Default Find in Files directory to the active file's folder
+            if (tabIndex == 2 && string.IsNullOrEmpty(txtFifDirectory.Text))
+            {
+                string activePath = editor?.Tag as string;
+                if (!string.IsNullOrEmpty(activePath))
+                    txtFifDirectory.Text = Path.GetDirectoryName(activePath);
             }
 
             // Center on the main form the first time
@@ -338,10 +356,12 @@ namespace nplus
             tabControl = new TabControl { Dock = DockStyle.Fill };
             var tabFind = new TabPage("Find");
             var tabReplace = new TabPage("Replace");
+            var tabFindInFiles = new TabPage("Find in Files");
             var tabMark = new TabPage("Mark");
 
             tabControl.TabPages.Add(tabFind);
             tabControl.TabPages.Add(tabReplace);
+            tabControl.TabPages.Add(tabFindInFiles);
             tabControl.TabPages.Add(tabMark);
             this.Controls.Add(tabControl);
 
@@ -405,23 +425,83 @@ namespace nplus
                 btnClose
             });
 
+            // --- Find in Files Panel (has its own dedicated panel) ---
+            Panel fifPanel = new Panel { Dock = DockStyle.Fill, BackColor = SystemColors.Window };
+
+            Label lblFifFind = new Label { Text = "Find what:", Location = new Point(10, 20), AutoSize = true };
+            txtFifFind = new ComboBox { Location = new Point(85, 18), Width = 280, DropDownStyle = ComboBoxStyle.DropDown };
+
+            Label lblFifReplace = new Label { Text = "Replace with:", Location = new Point(5, 50), AutoSize = true };
+            txtFifReplace = new ComboBox { Location = new Point(85, 48), Width = 280, DropDownStyle = ComboBoxStyle.DropDown };
+
+            Label lblFifFilter = new Label { Text = "Filters:", Location = new Point(10, 80), AutoSize = true };
+            txtFifFilter = new ComboBox { Location = new Point(85, 78), Width = 280, DropDownStyle = ComboBoxStyle.DropDown, Text = "*.*" };
+            txtFifFilter.Items.AddRange(new object[] { "*.*", "*.cs", "*.txt", "*.json", "*.xml", "*.html", "*.js", "*.py", "*.sql", "*.vb", "*.java", "*.php", "*.yml" });
+
+            Label lblFifDir = new Label { Text = "Directory:", Location = new Point(10, 110), AutoSize = true };
+            txtFifDirectory = new ComboBox { Location = new Point(85, 108), Width = 252, DropDownStyle = ComboBoxStyle.DropDown };
+            btnFifBrowse = new Button { Text = "...", Location = new Point(342, 107), Width = 28, Height = 23 };
+            btnFifBrowse.Click += (s, e) =>
+            {
+                using (var fbd = new FolderBrowserDialog())
+                {
+                    fbd.Description = "Select search directory";
+                    if (!string.IsNullOrEmpty(txtFifDirectory.Text) && Directory.Exists(txtFifDirectory.Text))
+                        fbd.SelectedPath = txtFifDirectory.Text;
+                    if (fbd.ShowDialog() == DialogResult.OK)
+                        txtFifDirectory.Text = fbd.SelectedPath;
+                }
+            };
+
+            chkFifMatchCase = new CheckBox { Text = "Match case", Location = new Point(10, 145), AutoSize = true };
+            chkFifWholeWord = new CheckBox { Text = "Match whole word only", Location = new Point(10, 168), AutoSize = true };
+            chkFifSubFolders = new CheckBox { Text = "In all sub-folders", Location = new Point(250, 145), AutoSize = true, Checked = true };
+            chkFifHidden = new CheckBox { Text = "In hidden folders", Location = new Point(250, 168), AutoSize = true };
+
+            GroupBox grpFifMode = new GroupBox { Text = "Search Mode", Location = new Point(10, 195), Size = new Size(250, 70) };
+            radFifNormal = new RadioButton { Text = "Normal", Location = new Point(10, 18), AutoSize = true, Checked = true };
+            radFifExtended = new RadioButton { Text = "Extended (\\n, \\r, \\t...)", Location = new Point(10, 42), AutoSize = true };
+            radFifRegex = new RadioButton { Text = "Regular expression", Location = new Point(140, 18), AutoSize = true };
+            grpFifMode.Controls.AddRange(new Control[] { radFifNormal, radFifExtended, radFifRegex });
+
+            btnFifFindAll = new Button { Text = "Find All", Location = new Point(400, 15), Width = 130 };
+            btnFifReplaceAll = new Button { Text = "Replace in Files", Location = new Point(400, 48), Width = 130 };
+            btnFifClose = new Button { Text = "Close", Location = new Point(400, 81), Width = 130 };
+
+            btnFifFindAll.Click += (s, e) => ExecuteFindInFiles(false);
+            btnFifReplaceAll.Click += (s, e) => ExecuteFindInFiles(true);
+            btnFifClose.Click += (s, e) => this.Hide();
+
+            fifPanel.Controls.AddRange(new Control[] {
+                lblFifFind, txtFifFind, lblFifReplace, txtFifReplace,
+                lblFifFilter, txtFifFilter,
+                lblFifDir, txtFifDirectory, btnFifBrowse,
+                chkFifMatchCase, chkFifWholeWord, chkFifSubFolders, chkFifHidden,
+                grpFifMode,
+                btnFifFindAll, btnFifReplaceAll, btnFifClose
+            });
+            tabFindInFiles.Controls.Add(fifPanel);
+
             tabControl.SelectedIndexChanged += (s, e) =>
             {
-                if (tabControl.SelectedTab != null)
+                int idx = tabControl.SelectedIndex;
+
+                // Find in Files (idx 2) has its own panel; other 3 tabs share commonPanel
+                if (idx != 2 && tabControl.SelectedTab != null)
                 {
                     tabControl.SelectedTab.Controls.Add(commonPanel);
                 }
 
-                bool isFind = tabControl.SelectedIndex == 0;
-                bool isReplace = tabControl.SelectedIndex == 1;
-                bool isMark = tabControl.SelectedIndex == 2;
+                bool isFind = idx == 0;
+                bool isReplace = idx == 1;
+                bool isMark = idx == 3;
 
                 lblReplace.Visible = isReplace;
                 txtReplace.Visible = isReplace;
                 btnReplace.Visible = isReplace;
                 btnReplaceAll.Visible = isReplace;
 
-                btnFindNext.Visible = !isMark;
+                btnFindNext.Visible = !isMark && idx != 2;
                 btnCount.Visible = isFind;
 
                 chkBookmarkLine.Visible = isMark;
@@ -430,7 +510,9 @@ namespace nplus
                 btnClearMarks.Visible = isMark;
                 btnCopyMarked.Visible = isMark;
 
-                this.Text = isFind ? "Find" : isReplace ? "Replace" : "Mark";
+                btnClose.Visible = idx != 2;
+
+                this.Text = isFind ? "Find" : isReplace ? "Replace" : idx == 2 ? "Find in Files" : "Mark";
             };
 
             tabFind.Controls.Add(commonPanel);
@@ -441,6 +523,157 @@ namespace nplus
         {
             if (!string.IsNullOrEmpty(txtFind.Text))
                 ExecuteSearch("FindNext");
+        }
+
+        private void ExecuteFindInFiles(bool replaceMode)
+        {
+            string searchText = txtFifFind.Text;
+            if (string.IsNullOrEmpty(searchText)) return;
+
+            string directory = txtFifDirectory.Text;
+            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            {
+                lblStatus.ForeColor = Color.IndianRed;
+                lblStatus.Text = "Please select a valid directory.";
+                return;
+            }
+
+            string replaceText = replaceMode ? txtFifReplace.Text : null;
+            string filter = string.IsNullOrWhiteSpace(txtFifFilter.Text) ? "*.*" : txtFifFilter.Text.Trim();
+            bool matchCase = chkFifMatchCase.Checked;
+            bool wholeWord = chkFifWholeWord.Checked;
+            bool subFolders = chkFifSubFolders.Checked;
+            bool hiddenFolders = chkFifHidden.Checked;
+            bool useRegex = radFifRegex.Checked;
+            bool useExtended = radFifExtended.Checked;
+
+            // Add to history
+            AddToHistory(_findHistory, txtFifFind);
+            if (replaceMode) AddToHistory(_replaceHistory, txtFifReplace);
+
+            // Process extended escape sequences
+            if (useExtended)
+            {
+                searchText = searchText.Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t").Replace("\\0", "\0");
+                if (replaceText != null)
+                    replaceText = replaceText.Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t").Replace("\\0", "\0");
+            }
+
+            lblStatus.ForeColor = Color.DarkSlateGray;
+            lblStatus.Text = "Searching...";
+            Application.DoEvents();
+
+            var searchOption = subFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+            var results = new List<string>();
+            int totalMatches = 0;
+            int filesMatched = 0;
+            int filesSearched = 0;
+            int filesReplaced = 0;
+
+            // Build regex or comparison
+            RegexOptions regOpts = matchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
+            StringComparison strComp = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+
+            Regex rx = null;
+            if (useRegex)
+            {
+                try { rx = new Regex(searchText, regOpts); }
+                catch (Exception ex)
+                {
+                    lblStatus.ForeColor = Color.IndianRed;
+                    lblStatus.Text = $"Invalid regex: {ex.Message}";
+                    return;
+                }
+            }
+            else if (wholeWord)
+            {
+                rx = new Regex(@"\b" + Regex.Escape(searchText) + @"\b", regOpts);
+            }
+
+            try
+            {
+                // Support multiple filters like "*.cs;*.txt"
+                var filters = filter.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                var allFiles = new List<string>();
+                foreach (var f in filters)
+                {
+                    try { allFiles.AddRange(Directory.GetFiles(directory, f.Trim(), searchOption)); }
+                    catch { /* access denied etc */ }
+                }
+
+                // Deduplicate
+                var fileSet = new HashSet<string>(allFiles, StringComparer.OrdinalIgnoreCase);
+
+                foreach (string filePath in fileSet)
+                {
+                    // Skip hidden folders if unchecked
+                    if (!hiddenFolders)
+                    {
+                        var dirInfo = new DirectoryInfo(Path.GetDirectoryName(filePath));
+                        if ((dirInfo.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden) continue;
+                    }
+
+                    try
+                    {
+                        string content = File.ReadAllText(filePath);
+                        string[] lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                        bool fileHasMatch = false;
+                        filesSearched++;
+
+                        for (int i = 0; i < lines.Length; i++)
+                        {
+                            bool lineMatched;
+                            if (rx != null)
+                                lineMatched = rx.IsMatch(lines[i]);
+                            else
+                                lineMatched = lines[i].IndexOf(searchText, strComp) >= 0;
+
+                            if (lineMatched)
+                            {
+                                totalMatches++;
+                                if (!fileHasMatch) { filesMatched++; fileHasMatch = true; }
+                                string trimmedLine = lines[i].Trim();
+                                if (trimmedLine.Length > 200) trimmedLine = trimmedLine.Substring(0, 200) + "...";
+                                results.Add($"{filePath}|{i + 1}|{trimmedLine}");
+                            }
+                        }
+
+                        if (replaceMode && fileHasMatch)
+                        {
+                            string newContent;
+                            if (rx != null)
+                                newContent = rx.Replace(content, replaceText ?? "");
+                            else if (matchCase)
+                                newContent = content.Replace(searchText, replaceText ?? "");
+                            else
+                                newContent = Regex.Replace(content, Regex.Escape(searchText), replaceText ?? "", RegexOptions.IgnoreCase);
+                            File.WriteAllText(filePath, newContent);
+                            filesReplaced++;
+                        }
+                    }
+                    catch { /* Skip locked/inaccessible files */ }
+                }
+            }
+            catch (Exception ex)
+            {
+                lblStatus.ForeColor = Color.IndianRed;
+                lblStatus.Text = $"Error: {ex.Message}";
+                return;
+            }
+
+            // Show results in the main form's search results panel
+            _mainForm.ShowFindInFilesResults(results, searchText, replaceMode);
+
+            if (replaceMode)
+            {
+                lblStatus.ForeColor = Color.DarkSlateGray;
+                lblStatus.Text = $"Replaced in {filesReplaced} file{(filesReplaced != 1 ? "s" : "")}. {totalMatches} hit{(totalMatches != 1 ? "s" : "")} in {filesSearched} file{(filesSearched != 1 ? "s" : "")} searched.";
+            }
+            else
+            {
+                lblStatus.ForeColor = totalMatches > 0 ? Color.DarkSlateGray : Color.IndianRed;
+                lblStatus.Text = $"{totalMatches} hit{(totalMatches != 1 ? "s" : "")} in {filesMatched} file{(filesMatched != 1 ? "s" : "")} ({filesSearched} searched).";
+            }
         }
 
         private void AddToHistory(List<string> history, ComboBox combo)

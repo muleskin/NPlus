@@ -23,6 +23,8 @@ Grab the latest `nplus.exe` from the [GitHub Releases page](https://github.com/m
 - **Revert to saved** to discard unsaved changes
 - **Read-only Hex view** for binary/executable files
 - **Read-only fallback** when a file is locked by another process
+- **External file change detection** — prompted to reload, close, or track renamed files when they are modified, deleted, or renamed by another program
+- **Tab save-status icons** — green dot for saved, orange dot for unsaved changes
 - **Encoding support** — ANSI, UTF-8, UTF-8 BOM, UTF-16 BE BOM, UTF-16 LE BOM, with auto-detect and convert-to options
 
 ### Macros
@@ -30,16 +32,22 @@ Grab the latest `nplus.exe` from the [GitHub Releases page](https://github.com/m
 - Playback once, N times, or to end-of-file (great for log processing)
 - **Save, load, and edit macros** step-by-step — saved macros persist between sessions
 
-### Find / Replace / Mark
+### Find / Replace / Mark / Find in Files
 - Normal, Extended (`\n`, `\t`), and Regex modes (`Ctrl+F`, `Ctrl+H`, `Ctrl+B`)
 - **Mark** tab highlights all matches and can drop a bookmark on every matching line
+- **Find in Files** (`Ctrl+Shift+F`) — search across all files in a directory with file-type filters, sub-folder recursion, and hidden-folder inclusion
+- **Replace in Files** — bulk find-and-replace across matching files on disk
+- Results appear in a dockable bottom panel; double-click any hit to open the file and jump to the line
 - Per-session search history dropdowns (up to 20 entries)
 
 ### Bookmarks & Line Operations
 - Toggle bookmarks (`Ctrl+F2`), navigate with `F2` / `Shift+F2`
 - Copy, cut, or delete all bookmarked lines
-- Sort lines lexicographically, join lines (`Ctrl+J`), shift lines up/down (`Ctrl+Shift+Up/Down`)
-- Trim leading/trailing/both whitespace, tabs ↔ spaces conversion
+- Duplicate, reverse, or randomize line order
+- Sort lines: lexicographic, locale, integer, decimal (comma/dot), by length — ascending or descending, with case-insensitive options
+- Split lines (`Ctrl+I`), join lines (`Ctrl+J`), shift lines up/down (`Ctrl+Shift+Up/Down`)
+- Remove duplicate lines, remove empty lines, insert blank lines above/below
+- **Blank operations** — trim leading/trailing/both whitespace, EOL to space, tabs ↔ spaces conversion
 
 ### JSON Tools
 - **Pretty-print / format** dense or single-line JSON
@@ -58,6 +66,8 @@ Grab the latest `nplus.exe` from the [GitHub Releases page](https://github.com/m
 | Shortcut | Action |
 | --- | --- |
 | `Ctrl+F` / `Ctrl+H` / `Ctrl+B` | Find / Replace / Mark |
+| `F3` | Find Next |
+| `Ctrl+Shift+F` | Find in Files |
 | `Ctrl+Alt+A` | Toggle column selection mode |
 | `Ctrl+F2` | Toggle bookmark on current line |
 | `F2` / `Shift+F2` | Next / previous bookmark |

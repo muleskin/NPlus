@@ -47,16 +47,10 @@ namespace nplus
                     editor.GotoPosition(editor.CurrentPosition + System.Environment.NewLine.Length);
                     break;
                 case MacroActionType.Backspace:
-                    if (editor.SelectionStart != editor.SelectionEnd)
-                        editor.ReplaceSelection("");
-                    else if (editor.CurrentPosition > 0)
-                        editor.DeleteRange(editor.CurrentPosition - 1, 1);
+                    if (editor.CurrentPosition > 0) editor.DeleteRange(editor.CurrentPosition - 1, 1);
                     break;
                 case MacroActionType.Delete:
-                    if (editor.SelectionStart != editor.SelectionEnd)
-                        editor.ReplaceSelection("");
-                    else if (editor.CurrentPosition < editor.TextLength)
-                        editor.DeleteRange(editor.CurrentPosition, 1);
+                    if (editor.CurrentPosition < editor.TextLength) editor.DeleteRange(editor.CurrentPosition, 1);
                     break;
                 case MacroActionType.KeyCommand:
                     editor.ExecuteCmd((Command)CommandId);
@@ -172,30 +166,10 @@ namespace nplus
         private static readonly string _ico_jsontree = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAe0lEQVR4nGNgGOqAEV3g2QKj/+hiUgnnMNQRC5jI1ThoLGChRLPNlhR4cB7xmYM1GMn2AbLh2PgwgDPy3HouYdUAA980JmGIYfPFwMfBrhI9nL6kaRwQC2geyQSDCFdkf2PAjGRsYDSSCYLRSCYIaB7JFBXXuAwdBSQBADHQNj/ZvWGqAAAAAElFTkSuQmCC";
         private static readonly string _ico_themetoggle = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAApklEQVR4nGNgGAUDDRiJVejWc+k/jL1AJIGBgYGBQSrhHIr+ZwuM/qOLEbQA2WB0C2BAKuEc47MFRv+R+TA2E6mGYwO4DMdrAbGGIwN0w3FaQI7hDAyoPsFrATUBhgXkuh4G0H1Bcx+w0MJQZF8MTR/gzWi7SvSILj4IGY7VAmoDrBaQ6wuyczI5lqAXeAQtIMUSZMPRLaF6fYBsKbFmkwSwBdPQBgDYYEnb4HzoJAAAAABJRU5ErkJggg==";
         private static readonly string _ico_userguide = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAA+UlEQVR4nOWVPQ6CQBCFn7AgKnHFUBgTG+lN5BCcyGNwIg9hYa+xJFoICRL/CBaGRNk1u4IUxK9j82bezpDZAf4Oz19nnr/OZPUt2aS88+ViJoznCooJXYcCAFab6O3s9fuTIeElzhOKYHQvF8vNFGHQF7gOZeIZg1/TfAMilvAJTzdsg+SZRG3BMjVM7A6jK13BoKfBdSjmUwqdKDhEV9xTdlwqt2i3T5BcUoyHBojKjlUlg/ic4hjfYPd1jKw2V1P6HwCAaajCualUQZTcsdpECMJLPQYyVGoR7ZJ6WyQDU0HxCZZ9/IpxOcKFIbu9ZJaPFN+uzObzAE23TLgiQMjfAAAAAElFTkSuQmCC";
+        private static readonly string _ico_findinfiles = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAw0lEQVR4nGNgGAUDDRhJUezWc+k/PvldJXoY5rGQYriRMj9O+XN3P2IVZyLWAnIB3EuEvI/P9QwMqD5ADiqUICJkCDEOQA8qouMABvI+BmKITeJfj1M9SXGAzXB84iRZgGzIJP71cEzIEqIsQDccGRCyhKQgwhXWVIsDcsDgsoBmqQhfROJLAAwMaEUFoZyMz6UwkPBmAUpRQXRZBAMLRBKwGoosLpVwDtMCaoBnC4zgjoRZQtVUhOxyZMuoDmhqODoAAE7ZTpSqywPsAAAAAElFTkSuQmCC";
+        private static readonly string _ico_record = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAX0lEQVR4nGNgGAXDHjASq/COkdF/dDGVc+cI6ieoAJvBpFjERKnhhNThtIBYwwmpx+sDagCsFpDqenz6BsYHoxYQtICYHEqsvoELIlJ9gUs9Xh8Qawk+dTQvTUfBwAMAUZIkHIO+Pd4AAAAASUVORK5CYII=";
+        private static readonly string _ico_stop = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAMklEQVR4nGNgGAXDHjBiE0xJyftProFz5kxCMZOJXIOIBaMWjFowasGoBSPCglEw8AAAkl0EHjsiY9kAAAAASUVORK5CYII=";
         private Image IconFromBase64(string b64) => Image.FromStream(new MemoryStream(Convert.FromBase64String(b64)));
-
-        private static Image MakeRecordIcon()
-        {
-            Bitmap bmp = new Bitmap(24, 24);
-            using (var g = Graphics.FromImage(bmp))
-            {
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                using (var brush = new SolidBrush(Color.FromArgb(220, 50, 50)))
-                    g.FillEllipse(brush, 4, 4, 16, 16);
-            }
-            return bmp;
-        }
-
-        private static Image MakeStopIcon()
-        {
-            Bitmap bmp = new Bitmap(24, 24);
-            using (var g = Graphics.FromImage(bmp))
-            {
-                using (var brush = new SolidBrush(Color.FromArgb(80, 80, 80)))
-                    g.FillRectangle(brush, 5, 5, 14, 14);
-            }
-            return bmp;
-        }
 
         private TabControl tcDocuments;
         private MenuStrip mainMenu;
@@ -220,6 +194,12 @@ namespace nplus
         private Panel _jsonPanel;
         private TreeView _jsonTree;
         private Label _jsonPanelHeader;
+
+        // Search Results Panel (bottom)
+        private SplitContainer _outerSplit;
+        private Panel _resultsPanel;
+        private ListView _resultsListView;
+        private Label _resultsHeader;
 
         private const int CloseBtnSize = 15;
 
@@ -264,9 +244,10 @@ namespace nplus
         private ToolStripButton btnLiveMonitor; // NEW
         private ToolStripButton btnJsonTree;
         private ToolStripButton btnPlayMacro;
-        private ToolStripButton btnStartRecord;
+        private ToolStripButton btnRecord;
         private ToolStripButton btnStopRecord;
         private ToolStripButton btnRevert;
+        private ToolStripButton btnFindInFiles;
         private ToolStripButton btnHelp;
 
         // Macro Menu Items
@@ -344,8 +325,10 @@ namespace nplus
             findItem.ShortcutKeys = Keys.Control | Keys.F;
             var replaceItem = (ToolStripMenuItem)editMenu.DropDownItems.Add("Replace", null, (s, e) => ShowFindDialog(1));
             replaceItem.ShortcutKeys = Keys.Control | Keys.H;
-            var markItem = (ToolStripMenuItem)editMenu.DropDownItems.Add("Mark", null, (s, e) => ShowFindDialog(2));
+            var markItem = (ToolStripMenuItem)editMenu.DropDownItems.Add("Mark", null, (s, e) => ShowFindDialog(3));
             markItem.ShortcutKeys = Keys.Control | Keys.B;
+            var findInFilesItem = (ToolStripMenuItem)editMenu.DropDownItems.Add("Find in Files", null, (s, e) => ShowFindDialog(2));
+            findInFilesItem.ShortcutKeys = Keys.Control | Keys.Shift | Keys.F;
             var findNextItem = (ToolStripMenuItem)editMenu.DropDownItems.Add("Find Next", null, (s, e) => FindNextFromEditor());
             findNextItem.ShortcutKeys = Keys.F3;
 
@@ -575,19 +558,19 @@ namespace nplus
             };
             btnPlayMacro.Click += (s, e) => PlaybackMacro(true);
 
-            btnStartRecord = new ToolStripButton()
+            btnRecord = new ToolStripButton()
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image,
-                Image = MakeRecordIcon(),
-                ToolTipText = "Start Recording Macro"
+                Image = IconFromBase64(_ico_record),
+                ToolTipText = "Start Macro Recording"
             };
-            btnStartRecord.Click += (s, e) => StartRecording();
+            btnRecord.Click += (s, e) => StartRecording();
 
             btnStopRecord = new ToolStripButton()
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image,
-                Image = MakeStopIcon(),
-                ToolTipText = "Stop Recording Macro",
+                Image = IconFromBase64(_ico_stop),
+                ToolTipText = "Stop Macro Recording",
                 Enabled = false
             };
             btnStopRecord.Click += (s, e) => StopRecording();
@@ -610,6 +593,14 @@ namespace nplus
                 ToolTipText = "Toggle JSON Tree Explorer Panel"
             };
             btnJsonTree.Click += (s, e) => ToggleJsonPanel();
+
+            btnFindInFiles = new ToolStripButton()
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                Image = IconFromBase64(_ico_findinfiles),
+                ToolTipText = "Find in Files (Ctrl+Shift+F)"
+            };
+            btnFindInFiles.Click += (s, e) => ShowFindDialog(2);
 
             btnThemeToggle = new ToolStripButton()
             {
@@ -639,8 +630,8 @@ namespace nplus
                 btnNew, new ToolStripSeparator(),
                 btnSave, btnSaveAll, btnRevert, new ToolStripSeparator(),
                 btnShowChars, btnIndentGuide, btnWordWrap, btnColSelect, new ToolStripSeparator(),
-                btnUndo, btnPlayMacro, btnStartRecord, btnStopRecord, new ToolStripSeparator(),
-                btnLiveMonitor, btnJsonTree, new ToolStripSeparator(),
+                btnUndo, btnRecord, btnStopRecord, btnPlayMacro, new ToolStripSeparator(),
+                btnLiveMonitor, btnJsonTree, btnFindInFiles, new ToolStripSeparator(),
                 btnThemeToggle, btnHelp
             });
 
@@ -748,7 +739,63 @@ namespace nplus
             _mainSplit.Panel1.Controls.Add(_jsonPanel);
             _mainSplit.Panel2.Controls.Add(tcDocuments);
 
-            this.Controls.Add(_mainSplit);
+            // --- SEARCH RESULTS PANEL (bottom, initially hidden) ---
+            _resultsListView = new ListView
+            {
+                Dock = DockStyle.Fill,
+                View = System.Windows.Forms.View.Details,
+                FullRowSelect = true,
+                GridLines = true,
+                Font = new Font("Consolas", 9.5f),
+                BorderStyle = BorderStyle.None
+            };
+            _resultsListView.Columns.Add("File", 250);
+            _resultsListView.Columns.Add("Line", 55);
+            _resultsListView.Columns.Add("Text", 600);
+            _resultsListView.DoubleClick += ResultsListView_DoubleClick;
+
+            var btnCloseResults = new Button
+            {
+                Text = "✕",
+                Dock = DockStyle.Right,
+                FlatStyle = FlatStyle.Flat,
+                Width = 28,
+                Cursor = Cursors.Hand
+            };
+            btnCloseResults.FlatAppearance.BorderSize = 0;
+            btnCloseResults.Click += (s, e) => { _outerSplit.Panel2Collapsed = true; };
+
+            _resultsHeader = new Label
+            {
+                Text = "  Search Results",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Height = 26
+            };
+
+            var resultsHeaderPanel = new Panel { Dock = DockStyle.Top, Height = 26 };
+            resultsHeaderPanel.Controls.Add(_resultsHeader);
+            resultsHeaderPanel.Controls.Add(btnCloseResults);
+
+            _resultsPanel = new Panel { Dock = DockStyle.Fill };
+            _resultsPanel.Controls.Add(_resultsListView);
+            _resultsPanel.Controls.Add(resultsHeaderPanel);
+
+            // --- OUTER SPLIT (editor area top, results bottom) ---
+            _outerSplit = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Horizontal,
+                Panel2Collapsed = true,
+                SplitterWidth = 4,
+                FixedPanel = FixedPanel.Panel2
+            };
+
+            _outerSplit.Panel1.Controls.Add(_mainSplit);
+            _outerSplit.Panel2.Controls.Add(_resultsPanel);
+
+            this.Controls.Add(_outerSplit);
             this.Controls.Add(mainToolbar);
             this.Controls.Add(statusBar);
             this.Controls.Add(mainMenu);
@@ -1371,6 +1418,114 @@ namespace nplus
             }
         }
 
+        public void ShowFindInFilesResults(List<string> results, string searchText, bool wasReplace)
+        {
+            _resultsListView.BeginUpdate();
+            _resultsListView.Items.Clear();
+
+            foreach (var result in results)
+            {
+                var parts = result.Split(new[] { '|' }, 3);
+                if (parts.Length == 3)
+                {
+                    var item = new ListViewItem(parts[0]);  // file path
+                    item.SubItems.Add(parts[1]);             // line number
+                    item.SubItems.Add(parts[2]);             // line text
+                    _resultsListView.Items.Add(item);
+                }
+            }
+
+            _resultsListView.EndUpdate();
+
+            _resultsHeader.Text = wasReplace
+                ? $"  Replace in Files Results — \"{searchText}\" — {results.Count} hit(s)"
+                : $"  Search Results — \"{searchText}\" — {results.Count} hit(s)";
+
+            ApplyResultsPanelTheme();
+
+            _outerSplit.Panel2Collapsed = false;
+            if (_outerSplit.Height > 0)
+                _outerSplit.SplitterDistance = Math.Max(100, (int)(_outerSplit.Height * 0.7));
+        }
+
+        private void ResultsListView_DoubleClick(object sender, EventArgs e)
+        {
+            if (_resultsListView.SelectedItems.Count == 0) return;
+
+            var item = _resultsListView.SelectedItems[0];
+            string filePath = item.Text;
+            int lineNumber;
+            if (!int.TryParse(item.SubItems[1].Text, out lineNumber)) return;
+
+            if (!File.Exists(filePath))
+            {
+                MessageBox.Show($"File not found:\n{filePath}", "n+", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Check if file is already open in a tab
+            TabPage existingTab = null;
+            foreach (TabPage page in tcDocuments.TabPages)
+            {
+                var editor = page.Controls[0] as Scintilla;
+                if (editor?.Tag is string openPath && string.Equals(openPath, filePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    existingTab = page;
+                    break;
+                }
+            }
+
+            if (existingTab != null)
+            {
+                tcDocuments.SelectedTab = existingTab;
+            }
+            else
+            {
+                AddNewTab("Loading...", filePath);
+                LoadFileIntoEditor(GetActiveEditor(), tcDocuments.SelectedTab, filePath);
+            }
+
+            // Jump to the line
+            var activeEditor = GetActiveEditor();
+            if (activeEditor != null && lineNumber > 0 && lineNumber <= activeEditor.Lines.Count)
+            {
+                int pos = activeEditor.Lines[lineNumber - 1].Position;
+                activeEditor.GotoPosition(pos);
+                activeEditor.Lines[lineNumber - 1].EnsureVisible();
+                activeEditor.Focus();
+            }
+        }
+
+        private void ApplyResultsPanelTheme()
+        {
+            if (_isDarkMode)
+            {
+                _resultsPanel.BackColor = Color.FromArgb(30, 30, 35);
+                _resultsListView.BackColor = Color.FromArgb(30, 30, 35);
+                _resultsListView.ForeColor = Color.LightGray;
+                _resultsHeader.BackColor = Color.FromArgb(40, 40, 45);
+                _resultsHeader.ForeColor = Color.Gainsboro;
+                _resultsHeader.Parent.BackColor = Color.FromArgb(40, 40, 45);
+                foreach (Control c in _resultsHeader.Parent.Controls)
+                {
+                    if (c is Button btn) { btn.ForeColor = Color.Gainsboro; btn.BackColor = Color.FromArgb(40, 40, 45); }
+                }
+            }
+            else
+            {
+                _resultsPanel.BackColor = SystemColors.Window;
+                _resultsListView.BackColor = SystemColors.Window;
+                _resultsListView.ForeColor = SystemColors.WindowText;
+                _resultsHeader.BackColor = SystemColors.Control;
+                _resultsHeader.ForeColor = SystemColors.ControlText;
+                _resultsHeader.Parent.BackColor = SystemColors.Control;
+                foreach (Control c in _resultsHeader.Parent.Controls)
+                {
+                    if (c is Button btn) { btn.ForeColor = SystemColors.ControlText; btn.BackColor = SystemColors.Control; }
+                }
+            }
+        }
+
         private void ApplyJsonLexer(Scintilla editor)
         {
             editor.Lexer = Lexer.Json;
@@ -1736,28 +1891,37 @@ namespace nplus
    - The Find and Replace fields remember recent search terms in a 
      dropdown history (up to 20 entries per session).
 
-6. BOOKMARK SYSTEM (Ctrl+F2)
+6. FIND IN FILES (Ctrl+Shift+F)
+   - Search for text across all files in a directory.
+   - Supports file filters (e.g. *.cs;*.txt), sub-folder recursion, 
+     and hidden folder inclusion.
+   - Results appear in a dockable panel at the bottom of the editor.
+   - Double-click any result to open the file and jump to the line.
+   - 'Replace in Files' performs a bulk find-and-replace across all 
+     matching files on disk.
+
+7. BOOKMARK SYSTEM (Ctrl+F2)
    - Press Ctrl+F2 to toggle a bookmark on your current line.
    - Jump forward between bookmarks with F2, and backward with Shift+F2.
    - Go to 'Edit -> Bookmark' to copy, cut, or delete bookmarked lines.
 
-7. LINE OPERATIONS (Ctrl+J, Ctrl+Shift+Up/Down)
+8. LINE OPERATIONS (Ctrl+J, Ctrl+Shift+Up/Down)
    - Highlight lines and select 'Sort Lexicographically'.
    - Press Ctrl+J to 'Join Lines' (removes line breaks in the selection).
    - Use Ctrl+Shift+Up/Down to quickly shift a line through your code.
 
-8. BLANK OPERATIONS (Edit Menu)
+9. BLANK OPERATIONS (Edit Menu)
    - Trim Trailing / Leading / Both whitespace from every line.
    - EOL to Space joins all lines into one with spaces between them.
    - Convert TABs to spaces or spaces to TABs (all or leading only).
    - All operations support undo.
 
-9. THEME ENGINE & WORD WRAP
+10. THEME ENGINE & WORD WRAP
    - Click the Toggle Theme icon to switch between Dark Matrix Mode 
      and Standard Light Mode. Syntax highlighting updates automatically.
    - Click the Word Wrap icon to wrap text to the visible window edge.
 
-10. ZOOM (View Menu)
+11. ZOOM (View Menu)
    - F11 to zoom in, F12 to zoom out, Ctrl + 0 to reset.
    - Scales the menu, tabs, toolbar, status bar, and all editor content.
    - Zoom level persists between sessions.
@@ -1765,7 +1929,7 @@ namespace nplus
      just the current editor tab. This does not affect the menu, 
      toolbar, or other tabs.
 
-11. JSON TOOLS
+12. JSON TOOLS
    - Go to 'Tools -> Format / Pretty Print JSON' to cleanly indent and
      format dense or single-line JSON payloads.
    - Go to 'Tools -> View JSON in Visual Tree' or click the JSON tree 
@@ -1774,34 +1938,34 @@ namespace nplus
    - Click the toolbar icon again to close the panel, or use the ✕ 
      button in the panel header. The splitter is draggable to resize.
 
-12. LIVE FILE MONITORING (TAIL)
+13. LIVE FILE MONITORING (TAIL)
    - Click the 'Live' icon on the toolbar to auto-reload the current 
      file whenever it is modified by an external program.
    - The tab will turn green, and new content will always auto-scroll 
      to the bottom so you can tail rolling log files hands-free.
    - Toggle the icon off to stop monitoring and resume normal editing.
 
-13. NEW DOCUMENT TOOLBAR BUTTON
+14. NEW DOCUMENT TOOLBAR BUTTON
    - The first button on the toolbar (page with a '+' icon) creates a 
      new empty tab, identical to 'File -> New'.
 
-14. REVERT TO SAVED
+15. REVERT TO SAVED
    - Click the blue circular arrow icon on the toolbar to reload the 
      current file from disk, discarding all unsaved changes.
    - You will be prompted to confirm before reverting.
 
-15. TAB REORDERING (DRAG AND DROP)
+16. TAB REORDERING (DRAG AND DROP)
    - Click and drag any open file tab to reposition it along the tab bar.
    - Tabs move in real-time as you drag, giving live visual feedback.
    - The close button on each tab continues to work as normal.
 
-16. RECENT FILES (File Menu)
+17. RECENT FILES (File Menu)
    - The File menu shows up to 10 recently opened files above Exit.
    - Click any entry to re-open it. If the file no longer exists, n+ 
      will offer to remove it from the list.
    - The list is saved between sessions automatically.
 
-17. ENCODING (Encoding Menu)
+18. ENCODING (Encoding Menu)
    - Supports ANSI, UTF-8, UTF-8 with BOM, UTF-16 BE BOM, and 
      UTF-16 LE BOM encodings.
    - The current encoding is auto-detected when a file is opened and 
@@ -1835,6 +1999,7 @@ namespace nplus
 
             // Update the JSON side panel theme if it's visible
             if (!_mainSplit.Panel1Collapsed) ApplyJsonPanelTheme();
+            if (!_outerSplit.Panel2Collapsed) ApplyResultsPanelTheme();
         }
 
         private void ApplyThemeToForm()
@@ -2023,7 +2188,7 @@ namespace nplus
             _isRecording = true;
             startRecordItem.Enabled = false;
             stopRecordItem.Enabled = true;
-            btnStartRecord.Enabled = false;
+            btnRecord.Enabled = false;
             btnStopRecord.Enabled = true;
             btnPlayMacro.Enabled = false;
             this.Text = "nplus - [RECORDING MACRO...]";
@@ -2034,10 +2199,10 @@ namespace nplus
             _isRecording = false;
             startRecordItem.Enabled = true;
             stopRecordItem.Enabled = false;
-            btnStartRecord.Enabled = true;
+            btnRecord.Enabled = true;
             btnStopRecord.Enabled = false;
             btnPlayMacro.Enabled = _currentMacro.Count > 0;
-            this.Text = "nplus - C# Enterprise Text Editor";
+            this.Text = "n+ - beta";
         }
 
         private void PlaybackMacro(bool wrapInUndo)
@@ -3116,8 +3281,8 @@ namespace nplus
             // 2. Apply Custom Background Colors
             if (isMonitored)
             {
-                // Cyan background for Live Monitoring
-                fillBrush = new SolidBrush(_isDarkMode ? Color.FromArgb(30, 80, 90) : Color.LightCyan);
+                // Green background for Live Monitoring
+                fillBrush = new SolidBrush(_isDarkMode ? Color.FromArgb(40, 80, 40) : Color.LightGreen);
             }
             else if (isReadOnly)
             {
