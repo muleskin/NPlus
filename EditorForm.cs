@@ -306,6 +306,11 @@ namespace nplus
 
             try { this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
+            // Allow files to be opened by dragging them onto the form (menu/toolbar/status areas).
+            this.AllowDrop = true;
+            this.DragEnter += Form_DragEnter;
+            this.DragDrop += Form_DragDrop;
+
             // --- MENU STRIP ---
             mainMenu = new MenuStrip();
 
@@ -3107,6 +3112,21 @@ namespace nplus
             TabPage page = new TabPage(title);
             Scintilla editor = new Scintilla { Dock = DockStyle.Fill, Tag = path };
 
+            // Accept files dropped directly onto the editor (overrides Scintilla's default
+            // behavior of inserting the dropped path as text).
+            editor.AllowDrop = true;
+            editor.DragEnter += (s, e) =>
+            {
+                e.Effect = e.Data != null && e.Data.GetDataPresent(DataFormats.FileDrop)
+                    ? DragDropEffects.Copy
+                    : DragDropEffects.None;
+            };
+            editor.DragDrop += (s, e) =>
+            {
+                if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                    OpenFilesFromPaths(e.Data.GetData(DataFormats.FileDrop) as string[]);
+            };
+
             // NEW: Fire the Status Bar updater whenever Scintilla repaints or the cursor moves
             editor.UpdateUI += (s, e) =>
             {
@@ -3383,6 +3403,13 @@ namespace nplus
 
         private void TcDocuments_DragOver(object sender, DragEventArgs e)
         {
+            // External file drop from Explorer — accept and let TcDocuments_DragDrop open the files.
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effect = DragDropEffects.Copy;
+                return;
+            }
+
             if (!e.Data.GetDataPresent(typeof(TabPage)))
             {
                 e.Effect = DragDropEffects.None;
@@ -3420,8 +3447,51 @@ namespace nplus
 
         private void TcDocuments_DragDrop(object sender, DragEventArgs e)
         {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                OpenFilesFromPaths(e.Data.GetData(DataFormats.FileDrop) as string[]);
+                return;
+            }
+
             _draggedTab = null;
             _dragStartIndex = -1;
+        }
+
+        private void Form_DragEnter(object sender, DragEventArgs e)
+        {
+            e.Effect = e.Data != null && e.Data.GetDataPresent(DataFormats.FileDrop)
+                ? DragDropEffects.Copy
+                : DragDropEffects.None;
+        }
+
+        private void Form_DragDrop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                OpenFilesFromPaths(e.Data.GetData(DataFormats.FileDrop) as string[]);
+            }
+        }
+
+        private void OpenFilesFromPaths(string[] paths)
+        {
+            if (paths == null || paths.Length == 0) return;
+
+            foreach (string filePath in paths)
+            {
+                if (string.IsNullOrEmpty(filePath)) continue;
+                if (Directory.Exists(filePath)) continue; // skip dropped folders
+                if (!File.Exists(filePath))
+                {
+                    MessageBox.Show($"File not found:\n{filePath}", "n+ - beta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    continue;
+                }
+
+                AddNewTab("Loading...", filePath);
+                LoadFileIntoEditor(GetActiveEditor(), tcDocuments.SelectedTab, filePath);
+                AddToRecentFiles(filePath);
+            }
+
+            this.Activate();
         }
 
         private void CloseTab(int idx)
