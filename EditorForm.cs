@@ -1,4 +1,5 @@
-﻿using ScintillaNET;
+﻿using Be.Windows.Forms;
+using ScintillaNET;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -297,7 +298,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - beta";
+            this.Text = "n+ - V 1.1b";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -1613,17 +1614,24 @@ namespace nplus
             int counter = 0;
             foreach (TabPage page in tcDocuments.TabPages)
             {
-                var editor = page.Controls[0] as Scintilla;
-                if (editor == null) continue;
-
-                string originalPath = editor.Tag as string ?? "";
+                if (page.Controls.Count == 0) continue;
+                var ctrl = page.Controls[0];
+                string originalPath = (ctrl as Scintilla)?.Tag as string
+                                      ?? (ctrl as HexBox)?.Tag as string
+                                      ?? "";
                 string tabTitle = page.Text;
                 string backupPath = "";
 
-                if (tabTitle.EndsWith("*") || string.IsNullOrEmpty(originalPath))
+                if (ctrl is Scintilla editor && (tabTitle.EndsWith("*") || string.IsNullOrEmpty(originalPath)))
                 {
                     backupPath = Path.Combine(_backupFolderPath, $"backup_{counter}.tmp");
                     try { File.WriteAllText(backupPath, editor.Text); } catch { }
+                }
+                else if (ctrl is HexBox && tabTitle.EndsWith("*"))
+                {
+                    // Dirty hex tabs aren't backed up — the user must save manually.
+                    // Strip the asterisk from the recorded title so we don't claim it was dirty.
+                    tabTitle = tabTitle.TrimEnd('*');
                 }
 
                 sessionLines.Add($"{originalPath}|{backupPath}|{tabTitle}");
@@ -1719,50 +1727,24 @@ namespace nplus
 
             if (IsBinaryFile(path))
             {
-                byte[] bytes;
-                try { bytes = File.ReadAllBytes(path); }
-                catch (IOException)
-                {
-                    // File is locked — read via shared access
-                    using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-                    using (var ms = new MemoryStream())
-                    {
-                        fs.CopyTo(ms);
-                        bytes = ms.ToArray();
-                    }
-                }
-
-                System.Text.StringBuilder hexBuilder = new System.Text.StringBuilder(bytes.Length * 4);
-
-                for (int i = 0; i < bytes.Length; i += 16)
-                {
-                    hexBuilder.Append($"{i:X8}  ");
-                    for (int j = 0; j < 16; j++)
-                    {
-                        if (i + j < bytes.Length) hexBuilder.Append($"{bytes[i + j]:X2} ");
-                        else hexBuilder.Append("   ");
-                        if (j == 7) hexBuilder.Append(" ");
-                    }
-
-                    hexBuilder.Append(" |");
-                    for (int j = 0; j < 16; j++)
-                    {
-                        if (i + j < bytes.Length)
-                        {
-                            char c = (char)bytes[i + j];
-                            if (char.IsControl(c)) hexBuilder.Append(".");
-                            else hexBuilder.Append(c);
-                        }
-                    }
-                    hexBuilder.AppendLine("|");
-                }
-
-                editor.Text = hexBuilder.ToString();
-                editor.ReadOnly = true;
-                page.Text = Path.GetFileName(path) + " [HEX]";
-                editor.Lexer = Lexer.Null;
+                LoadBinaryFileIntoTab(page, path);
+                return;
             }
-            else
+
+            // Text branch — if the tab currently hosts a HexBox (e.g., previously binary,
+            // now reverted to a text file), swap it back to a Scintilla.
+            if (editor == null)
+            {
+                if (page.Controls.Count > 0)
+                {
+                    var existing = page.Controls[0];
+                    page.Controls.Remove(existing);
+                    existing.Dispose();
+                }
+                editor = new Scintilla { Dock = DockStyle.Fill };
+                page.Controls.Add(editor);
+            }
+
             {
                 bool openedReadOnly = false;
                 string text;
@@ -1806,6 +1788,97 @@ namespace nplus
 
             // Start watching for external changes to this file
             StartFileChangeWatch(page, path);
+        }
+
+        private void LoadBinaryFileIntoTab(TabPage page, string path)
+        {
+            byte[] bytes;
+            try { bytes = File.ReadAllBytes(path); }
+            catch (IOException)
+            {
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                using (var ms = new MemoryStream())
+                {
+                    fs.CopyTo(ms);
+                    bytes = ms.ToArray();
+                }
+            }
+
+            // Remove any existing control (a Scintilla placeholder is typically pre-added by AddNewTab).
+            foreach (Control existing in page.Controls.Cast<Control>().ToList())
+            {
+                page.Controls.Remove(existing);
+                existing.Dispose();
+            }
+
+            var provider = new DynamicByteProvider(bytes);
+            var hex = new HexBox
+            {
+                Dock = DockStyle.Fill,
+                Tag = path,
+                ByteProvider = provider,
+                VScrollBarVisible = true,
+                LineInfoVisible = true,
+                StringViewVisible = true,
+                ColumnInfoVisible = true,
+                UseFixedBytesPerLine = true,
+                BytesPerLine = 16,
+                GroupSize = 8,
+                HexCasing = HexCasing.Upper,
+                ReadOnly = false,
+                Font = new Font(FontFamily.GenericMonospace, 10f)
+            };
+
+            ApplyHexBoxTheme(hex);
+
+            provider.Changed += (s, e) =>
+            {
+                if (!page.Text.EndsWith("*"))
+                {
+                    page.Text += "*";
+                    if (tcDocuments.SelectedTab == page) UpdateToolbarState();
+                }
+            };
+
+            hex.AllowDrop = true;
+            hex.DragEnter += (s, e) =>
+            {
+                e.Effect = e.Data != null && e.Data.GetDataPresent(DataFormats.FileDrop)
+                    ? DragDropEffects.Copy
+                    : DragDropEffects.None;
+            };
+            hex.DragDrop += (s, e) =>
+            {
+                if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                    OpenFilesFromPaths(e.Data.GetData(DataFormats.FileDrop) as string[]);
+            };
+
+            page.Controls.Add(hex);
+            page.Text = Path.GetFileName(path);
+
+            UpdateToolbarState();
+            StartFileChangeWatch(page, path);
+        }
+
+        private void ApplyHexBoxTheme(HexBox hex)
+        {
+            if (_isDarkMode)
+            {
+                hex.BackColor = Color.FromArgb(30, 30, 30);
+                hex.ForeColor = Color.Gainsboro;
+                hex.InfoForeColor = Color.LightSlateGray;
+                hex.SelectionBackColor = Color.FromArgb(60, 80, 120);
+                hex.SelectionForeColor = Color.White;
+                hex.ShadowSelectionColor = Color.FromArgb(80, 60, 80, 120);
+            }
+            else
+            {
+                hex.BackColor = SystemColors.Window;
+                hex.ForeColor = SystemColors.WindowText;
+                hex.InfoForeColor = SystemColors.GrayText;
+                hex.SelectionBackColor = SystemColors.Highlight;
+                hex.SelectionForeColor = SystemColors.HighlightText;
+            }
         }
         #endregion
 
@@ -1865,7 +1938,8 @@ namespace nplus
      C#, C/C++, Java, JavaScript/TypeScript, Python, SQL, 
      Visual Basic (.vb/.bas), VBScript (.vbs), PowerShell (.ps1),
      PHP, HTML, XML/XAML, JSON, and YAML (.yml/.yaml).
-   - Binary/Executable files are safely opened in a Read-Only Hex View.
+   - Binary/Executable files open in a fully editable Hex Editor
+     (see section 19).
    - Files locked by another process are opened in Read-Only mode,
      with '[READ-ONLY]' shown in the tab title.
 
@@ -1971,14 +2045,47 @@ namespace nplus
    - The list is saved between sessions automatically.
 
 18. ENCODING (Encoding Menu)
-   - Supports ANSI, UTF-8, UTF-8 with BOM, UTF-16 BE BOM, and 
+   - Supports ANSI, UTF-8, UTF-8 with BOM, UTF-16 BE BOM, and
      UTF-16 LE BOM encodings.
-   - The current encoding is auto-detected when a file is opened and 
+   - The current encoding is auto-detected when a file is opened and
      shown in the status bar.
-   - Select an encoding at the top of the menu to change how the 
+   - Select an encoding at the top of the menu to change how the
      file will be saved (without converting existing content).
    - Use 'Convert to...' options to re-encode the actual text content.
    - A bullet marker indicates the current encoding in the menu.
+
+19. HEX EDITOR (Binary Files)
+   - Files containing non-text bytes are automatically opened in a
+     dedicated hex editor instead of the text editor.
+   - Three columns are shown:
+       * OFFSET     - left gutter, shows the byte address of each row.
+       * HEX        - middle, two hex digits per byte, grouped in 8s.
+       * ASCII      - right, printable characters; '.' for non-printable.
+   - Editing rules:
+       * Click anywhere in either the hex column or the ASCII column to
+         place the caret at that byte (or half-byte in the hex column).
+       * In the HEX column, type one hex digit at a time. Each digit
+         overwrites a single nibble (half-byte) and the caret auto-
+         advances to the next nibble — no spaces to navigate past.
+       * In the ASCII column, type printable characters to overwrite
+         bytes one-at-a-time.
+       * Press Tab to switch the caret between the hex and ASCII columns.
+       * Caret movement: arrows, Home, End, Page Up/Down, and Ctrl+arrows
+         all behave as expected for hex navigation.
+       * Editing is overwrite-only by default — the file's byte length is
+         preserved as you type. Use the context menu (right-click) for
+         Cut / Copy / Paste / Select All.
+       * Ctrl+Z / Ctrl+Y undo and redo your byte-level edits.
+   - The offset column is read-only and updates automatically.
+   - Saving (Ctrl+S) writes the bytes verbatim to disk via File ->
+     Save or Save As..., the same way text tabs save. The dirty '*'
+     marker appears on the tab after any byte change.
+   - Theme: the hex editor follows the same Dark/Light theme as the
+     text editor and re-themes live when you toggle the theme icon.
+   - Features that apply only to text tabs (Find/Replace dialog,
+     Encoding menu, syntax highlighting, macros, JSON tools, line/blank
+     operations, status bar position display) are inactive when the
+     active tab is a hex editor.
 
 ========================================================================";
 
@@ -1994,10 +2101,15 @@ namespace nplus
 
             foreach (TabPage page in tcDocuments.TabPages)
             {
+                if (page.Controls.Count == 0) continue;
                 if (page.Controls[0] is Scintilla editor)
                 {
                     string path = editor.Tag as string;
                     ApplySyntaxHighlighting(editor, path);
+                }
+                else if (page.Controls[0] is HexBox hex)
+                {
+                    ApplyHexBoxTheme(hex);
                 }
             }
             tcDocuments.Invalidate();
@@ -2087,11 +2199,11 @@ namespace nplus
 
         private void RevertToSaved()
         {
-            var editor = GetActiveEditor();
             var page = tcDocuments.SelectedTab;
-            if (editor == null || page == null) return;
+            if (page == null || page.Controls.Count == 0) return;
+            var control = page.Controls[0];
 
-            string path = editor.Tag as string;
+            string path = (control as Scintilla)?.Tag as string ?? (control as HexBox)?.Tag as string;
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
                 MessageBox.Show("This file has no saved version on disk.", "nplus", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -2101,7 +2213,7 @@ namespace nplus
             var res = MessageBox.Show($"Revert to the last saved version of:\n{Path.GetFileName(path)}?\n\nAll unsaved changes will be lost.", "Confirm Revert", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             if (res != DialogResult.Yes) return;
 
-            LoadFileIntoEditor(editor, page, path);
+            LoadFileIntoEditor(control as Scintilla, page, path);
         }
 
         private void ZoomIn()
@@ -2207,7 +2319,7 @@ namespace nplus
             btnRecord.Enabled = true;
             btnStopRecord.Enabled = false;
             btnPlayMacro.Enabled = _currentMacro.Count > 0;
-            this.Text = "n+ - beta";
+            this.Text = "n+ - v1.0";
         }
 
         private void PlaybackMacro(bool wrapInUndo)
@@ -3501,7 +3613,7 @@ namespace nplus
             if (page.Text.EndsWith("*"))
             {
                 var res = MessageBox.Show($"Save changes to {page.Text.TrimEnd('*')}?", "nplus", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
-                if (res == DialogResult.Yes) SaveSpecificFile(page.Controls[0] as Scintilla, page);
+                if (res == DialogResult.Yes) SaveTab(page);
                 else if (res == DialogResult.Cancel) return;
             }
 
@@ -3519,6 +3631,12 @@ namespace nplus
 
             // Clean up encoding tracking
             _tabEncodings.Remove(page);
+
+            // Dispose any HexBox byte provider on this tab to release native handles
+            if (page.Controls.Count > 0 && page.Controls[0] is HexBox hex && hex.ByteProvider is IDisposable disposableProvider)
+            {
+                disposableProvider.Dispose();
+            }
 
             tcDocuments.TabPages.RemoveAt(idx);
             if (tcDocuments.TabCount == 0) AddNewTab("new 1");
@@ -3545,43 +3663,50 @@ namespace nplus
 
         private void SaveFile()
         {
-            var editor = GetActiveEditor();
-            if (editor != null && tcDocuments.SelectedTab.Text.EndsWith("*"))
-            {
-                SaveSpecificFile(editor, tcDocuments.SelectedTab);
-            }
+            var page = tcDocuments.SelectedTab;
+            if (page != null && page.Text.EndsWith("*")) SaveTab(page);
         }
 
         private void SaveFileAs()
         {
-            var editor = GetActiveEditor();
             var page = tcDocuments.SelectedTab;
+            if (page == null || page.Controls.Count == 0) return;
 
-            if (editor == null || page == null) return;
+            var control = page.Controls[0];
+            string currentPath = (control as Scintilla)?.Tag as string
+                                 ?? (control as HexBox)?.Tag as string;
 
             using (SaveFileDialog sfd = new SaveFileDialog())
             {
-                if (editor.Tag is string currentPath && !string.IsNullOrEmpty(currentPath))
+                if (!string.IsNullOrEmpty(currentPath))
                 {
                     sfd.FileName = Path.GetFileName(currentPath);
                     sfd.InitialDirectory = Path.GetDirectoryName(currentPath);
                 }
 
-                if (sfd.ShowDialog() == DialogResult.OK)
-                {
-                    string newPath = sfd.FileName;
-                    StopFileChangeWatch(page);
-                    File.WriteAllText(newPath, editor.Text, GetTabEncoding(page));
+                if (sfd.ShowDialog() != DialogResult.OK) return;
 
+                string newPath = sfd.FileName;
+                StopFileChangeWatch(page);
+
+                if (control is HexBox hex)
+                {
+                    File.WriteAllBytes(newPath, GetHexBoxBytes(hex));
+                    hex.Tag = newPath;
+                    page.Text = Path.GetFileName(newPath);
+                }
+                else if (control is Scintilla editor)
+                {
+                    File.WriteAllText(newPath, editor.Text, GetTabEncoding(page));
                     editor.Tag = newPath;
                     page.Text = Path.GetFileName(newPath);
                     ApplySyntaxHighlighting(editor, newPath);
-
                     editor.SetSavePoint();
-                    UpdateToolbarState();
-                    AddToRecentFiles(newPath);
-                    StartFileChangeWatch(page, newPath);
                 }
+
+                UpdateToolbarState();
+                AddToRecentFiles(newPath);
+                StartFileChangeWatch(page, newPath);
             }
         }
 
@@ -3597,11 +3722,68 @@ namespace nplus
             var res = MessageBox.Show($"Are you sure you want to save {modifiedPages.Count} modified files?", "Confirm Save All", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (res != DialogResult.Yes) return;
 
-            foreach (TabPage page in modifiedPages)
+            foreach (TabPage page in modifiedPages) SaveTab(page);
+        }
+
+        private void SaveTab(TabPage page)
+        {
+            if (page == null || page.Controls.Count == 0) return;
+            var control = page.Controls[0];
+
+            if (control is HexBox hex)
             {
-                var editor = page.Controls[0] as Scintilla;
-                if (editor != null) SaveSpecificFile(editor, page);
+                SaveHexBoxTab(hex, page);
             }
+            else if (control is Scintilla editor)
+            {
+                SaveSpecificFile(editor, page);
+            }
+        }
+
+        private void SaveHexBoxTab(HexBox hex, TabPage page)
+        {
+            string path = hex.Tag as string;
+            if (string.IsNullOrEmpty(path))
+            {
+                using (SaveFileDialog sfd = new SaveFileDialog())
+                {
+                    if (sfd.ShowDialog() == DialogResult.OK) path = sfd.FileName; else return;
+                }
+            }
+
+            StopFileChangeWatch(page);
+            File.WriteAllBytes(path, GetHexBoxBytes(hex));
+            hex.Tag = path;
+
+            // Reset the byte provider's dirty state by re-seeding it from the saved bytes.
+            // This ensures the next edit re-fires Changed and re-marks the tab dirty.
+            var fresh = new DynamicByteProvider(File.ReadAllBytes(path));
+            fresh.Changed += (s, e) =>
+            {
+                if (!page.Text.EndsWith("*"))
+                {
+                    page.Text += "*";
+                    if (tcDocuments.SelectedTab == page) UpdateToolbarState();
+                }
+            };
+            hex.ByteProvider = fresh;
+
+            page.Text = Path.GetFileName(path);
+            UpdateToolbarState();
+            StartFileChangeWatch(page, path);
+        }
+
+        private static byte[] GetHexBoxBytes(HexBox hex)
+        {
+            if (hex.ByteProvider is DynamicByteProvider dyn)
+            {
+                return dyn.Bytes.ToArray();
+            }
+            // Fallback for other provider types: read byte-by-byte.
+            long len = hex.ByteProvider?.Length ?? 0;
+            var arr = new byte[len];
+            for (long i = 0; i < len; i++) arr[i] = hex.ByteProvider.ReadByte(i);
+            return arr;
         }
 
         private void SaveSpecificFile(Scintilla editor, TabPage page)
@@ -3617,12 +3799,12 @@ namespace nplus
 
             // Temporarily stop watching to avoid self-triggering on our own save
             StopFileChangeWatch(page);
-
             File.WriteAllText(path, editor.Text, GetTabEncoding(page));
             editor.Tag = path;
 
             page.Text = Path.GetFileName(path);
             ApplySyntaxHighlighting(editor, path);
+            editor.SetSavePoint();
             UpdateToolbarState();
             StartFileChangeWatch(page, path);
         }

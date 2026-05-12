@@ -20,5 +20,6 @@ C:\Users\Jedd\Desktop\Developing\nplus\bin\Debug\System.Runtime.CompilerServices
 C:\Users\Jedd\Desktop\Developing\nplus\bin\Debug\System.Text.Encodings.Web.xml
 C:\Users\Jedd\Desktop\Developing\nplus\bin\Debug\System.Text.Json.xml
 C:\Users\Jedd\Desktop\Developing\nplus\bin\Debug\System.Threading.Tasks.Extensions.xml
+C:\Users\Jedd\Desktop\Developing\nplus\bin\Debug\Be.Windows.Forms.HexBox.xml
 C:\Users\Jedd\Desktop\Developing\nplus\obj\Debug\nplus.csproj.Fody.CopyLocal.cache
 C:\Users\Jedd\Desktop\Developing\nplus\obj\Debug\nplus.csproj.Fody.RuntimeCopyLocal.cache
