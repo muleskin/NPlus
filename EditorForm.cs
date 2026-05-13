@@ -891,9 +891,12 @@ namespace nplus
 
                 try
                 {
-                    // Read file safely, allowing other applications concurrent access
+                    // Read file safely, allowing other applications concurrent access.
+                    // Use the tab's detected encoding so non-UTF-8 files (e.g. BOM-less
+                    // UTF-16 logs) reload correctly instead of being parsed as UTF-8.
+                    var enc = GetTabEncoding(targetPage) ?? Encoding.UTF8;
                     using (var fs = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                    using (var sr = new StreamReader(fs))
+                    using (var sr = new StreamReader(fs, enc, detectEncodingFromByteOrderMarks: true))
                     {
                         string text = sr.ReadToEnd();
 
@@ -1703,18 +1706,24 @@ namespace nplus
                     int bytesToCheck = 8192;
                     byte[] buffer = new byte[bytesToCheck];
                     int bytesRead = stream.Read(buffer, 0, bytesToCheck);
+                    if (bytesRead == 0) return false;
 
-                    // UTF-16 files contain null bytes normally — check for BOM first
+                    // UTF-16 with BOM is unambiguous.
                     if (bytesRead >= 2)
                     {
                         if (buffer[0] == 0xFF && buffer[1] == 0xFE) return false; // UTF-16 LE
                         if (buffer[0] == 0xFE && buffer[1] == 0xFF) return false; // UTF-16 BE
                     }
 
-                    for (int i = 0; i < bytesRead; i++)
-                    {
-                        if (buffer[i] == 0x00) return true;
-                    }
+                    // No null bytes -> definitely text.
+                    bool hasNull = false;
+                    for (int i = 0; i < bytesRead; i++) { if (buffer[i] == 0x00) { hasNull = true; break; } }
+                    if (!hasNull) return false;
+
+                    // BOM-less UTF-16 detection (common in Windows logs).
+                    if (LooksLikeBomlessUtf16(buffer, bytesRead) != null) return false;
+
+                    return true;
                 }
             }
             catch { /* Fallback to text if locked */ }
@@ -3091,16 +3100,21 @@ namespace nplus
 
         private Encoding DetectFileEncoding(string filePath)
         {
-            byte[] bom = new byte[4];
+            byte[] head = new byte[8192];
+            int headLen;
             using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
             {
-                fs.Read(bom, 0, 4);
+                headLen = fs.Read(head, 0, head.Length);
             }
 
-            // Check BOM signatures
-            if (bom[0] == 0xFE && bom[1] == 0xFF) return Encoding.BigEndianUnicode;       // UTF-16 BE BOM
-            if (bom[0] == 0xFF && bom[1] == 0xFE) return Encoding.Unicode;                 // UTF-16 LE BOM
-            if (bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) return Encoding.UTF8;  // UTF-8 BOM
+            // BOM signatures
+            if (headLen >= 2 && head[0] == 0xFE && head[1] == 0xFF) return Encoding.BigEndianUnicode;       // UTF-16 BE BOM
+            if (headLen >= 2 && head[0] == 0xFF && head[1] == 0xFE) return Encoding.Unicode;                 // UTF-16 LE BOM
+            if (headLen >= 3 && head[0] == 0xEF && head[1] == 0xBB && head[2] == 0xBF) return Encoding.UTF8;  // UTF-8 BOM
+
+            // BOM-less UTF-16 (e.g. many Windows log files)
+            var bomless = LooksLikeBomlessUtf16(head, headLen);
+            if (bomless != null) return bomless;
 
             // No BOM — check if content is valid UTF-8
             try
@@ -3120,6 +3134,50 @@ namespace nplus
             {
                 return Encoding.Default; // ANSI fallback
             }
+        }
+
+        // Returns Encoding.Unicode / BigEndianUnicode if the byte pattern strongly suggests
+        // BOM-less UTF-16 (nulls cluster on one side of byte pairs, printable ASCII on the
+        // other). Returns null otherwise.
+        private static Encoding LooksLikeBomlessUtf16(byte[] buffer, int len)
+        {
+            if (len < 4) return null;
+
+            int nullsAtEven = 0, nullsAtOdd = 0;
+            int printableAtEven = 0, printableAtOdd = 0;
+            int evenCount = 0, oddCount = 0;
+            for (int i = 0; i < len; i++)
+            {
+                byte b = buffer[i];
+                bool isPrintable = (b >= 0x20 && b <= 0x7E) || b == 0x09 || b == 0x0A || b == 0x0D;
+                if ((i & 1) == 0)
+                {
+                    evenCount++;
+                    if (b == 0) nullsAtEven++;
+                    if (isPrintable) printableAtEven++;
+                }
+                else
+                {
+                    oddCount++;
+                    if (b == 0) nullsAtOdd++;
+                    if (isPrintable) printableAtOdd++;
+                }
+            }
+            if (evenCount == 0 || oddCount == 0) return null;
+
+            // UTF-16 LE: nulls cluster on the odd side; even side is mostly printable.
+            if (nullsAtOdd >= oddCount * 0.85
+                && nullsAtEven <= evenCount * 0.05
+                && printableAtEven >= evenCount * 0.70)
+                return Encoding.Unicode;
+
+            // UTF-16 BE: mirror of the above.
+            if (nullsAtEven >= evenCount * 0.85
+                && nullsAtOdd <= oddCount * 0.05
+                && printableAtOdd >= oddCount * 0.70)
+                return Encoding.BigEndianUnicode;
+
+            return null;
         }
 
         private string GetEncodingName(Encoding enc)
