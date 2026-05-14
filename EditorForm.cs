@@ -165,6 +165,7 @@ namespace nplus
         private static readonly string _ico_playmacro = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAeElEQVR4nO3Vuw2AMAwE0ANlLEZgDMZiDEbIXlBZsiKQ/xJFrnRxT5cmwMyvs13HHe1YNUgEEgEOlQKEWCETwKFSgBAN5Aa0UBjgUClAyAi1TKDv5zLe0ha8lQMJC76Kw4BUTHE9kbYcMC6wFFPUCzzlYjL+gxkxDy27Lr81Sif2AAAAAElFTkSuQmCC";
         private static readonly string _ico_livemonitor = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAj0lEQVR4nGNgGAX0BncC3P7fCXD7D+MzUdtwdDYjLQxHBiz4NNlsSYFrOuIzhyzHUC2IVDbswnCAyoZdjFSNA2RLsFmIAmy2pPyHBRFyUJEK8MYBuoXIfGLjhKpBRLIF2FwJEyM22LBaQEgzKUkWHgfkRCQxDiEqDsjNZCQB5GRLCiDKB5TkA5on01EwAgAAJMg6MJ2h2xEAAAAASUVORK5CYII=";
         private static readonly string _ico_jsontree = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAe0lEQVR4nGNgGOqAEV3g2QKj/+hiUgnnMNQRC5jI1ThoLGChRLPNlhR4cB7xmYM1GMn2AbLh2PgwgDPy3HouYdUAA980JmGIYfPFwMfBrhI9nL6kaRwQC2geyQSDCFdkf2PAjGRsYDSSCYLRSCYIaB7JFBXXuAwdBSQBADHQNj/ZvWGqAAAAAElFTkSuQmCC";
+        private static readonly string _ico_hextoggle = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEjSURBVEhL7VPBDcIwDOwALMACLMACTFA7j/7YgA1YgV26BFuwAE+ePEEXnaM4MqgIqITESZaSnO2znaTr/ngFwzAsVPWgqjfatuZSSjuejz6y60RkA05ETi1XgARwoNCKyVbg+r7vIS4ix0iA3B4xKaVly2cgGCJcm3PeG5A8EkBhqrpmAaVzB1acq6TAOEXAusXa4mq+gFVgjhvuS0eGBwJbO7O7wJhrH3PM1YM0x3aekQDHYg8jmxXpwMtFguyEizWuekG1rRmT1+ZLwUNJPBvaKnFhxqHCtoMpnAMF8nx5cVGSMoopnMNcAp8YUfwPmg5cVe2+xjPOoRawf/ANgXdGFAuo6rkN/oCda4H43b4Bl3MOgWvQ4lS7BGewq1P8WdwBW+BvFeT+kmoAAAAASUVORK5CYII=";
         private static readonly string _ico_themetoggle = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAApklEQVR4nGNgGAUDDRiJVejWc+k/jL1AJIGBgYGBQSrhHIr+ZwuM/qOLEbQA2WB0C2BAKuEc47MFRv+R+TA2E6mGYwO4DMdrAbGGIwN0w3FaQI7hDAyoPsFrATUBhgXkuh4G0H1Bcx+w0MJQZF8MTR/gzWi7SvSILj4IGY7VAmoDrBaQ6wuyczI5lqAXeAQtIMUSZMPRLaF6fYBsKbFmkwSwBdPQBgDYYEnb4HzoJAAAAABJRU5ErkJggg==";
         private static readonly string _ico_userguide = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAA+UlEQVR4nOWVPQ6CQBCFn7AgKnHFUBgTG+lN5BCcyGNwIg9hYa+xJFoICRL/CBaGRNk1u4IUxK9j82bezpDZAf4Oz19nnr/OZPUt2aS88+ViJoznCooJXYcCAFab6O3s9fuTIeElzhOKYHQvF8vNFGHQF7gOZeIZg1/TfAMilvAJTzdsg+SZRG3BMjVM7A6jK13BoKfBdSjmUwqdKDhEV9xTdlwqt2i3T5BcUoyHBojKjlUlg/ic4hjfYPd1jKw2V1P6HwCAaajCualUQZTcsdpECMJLPQYyVGoR7ZJ6WyQDU0HxCZZ9/IpxOcKFIbu9ZJaPFN+uzObzAE23TLgiQMjfAAAAAElFTkSuQmCC";
         private static readonly string _ico_findinfiles = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAw0lEQVR4nGNgGAUDDRhJUezWc+k/PvldJXoY5rGQYriRMj9O+XN3P2IVZyLWAnIB3EuEvI/P9QwMqD5ADiqUICJkCDEOQA8qouMABvI+BmKITeJfj1M9SXGAzXB84iRZgGzIJP71cEzIEqIsQDccGRCyhKQgwhXWVIsDcsDgsoBmqQhfROJLAAwMaEUFoZyMz6UwkPBmAUpRQXRZBAMLRBKwGoosLpVwDtMCaoBnC4zgjoRZQtVUhOxyZMuoDmhqODoAAE7ZTpSqywPsAAAAAElFTkSuQmCC";
@@ -244,6 +245,7 @@ namespace nplus
         private ToolStripButton btnThemeToggle;
         private ToolStripButton btnLiveMonitor; // NEW
         private ToolStripButton btnJsonTree;
+        private ToolStripButton btnHexToggle;
         private ToolStripButton btnPlayMacro;
         private ToolStripButton btnRecord;
         private ToolStripButton btnStopRecord;
@@ -271,7 +273,9 @@ namespace nplus
         private ToolStripMenuItem _encodingMenu;
         private Dictionary<TabPage, Encoding> _tabEncodings = new Dictionary<TabPage, Encoding>();
 
-        public EditorForm()
+        public EditorForm() : this(null) { }
+
+        public EditorForm(string[] filesToOpen)
         {
             // Setup hidden background paths for Session Snapshots & Settings
             _appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "nplus");
@@ -294,11 +298,16 @@ namespace nplus
 
             if (_zoomLevel != 1.0f) ApplyZoom();
             if (_restoreMaximized) this.WindowState = FormWindowState.Maximized;
+
+            if (filesToOpen != null && filesToOpen.Length > 0)
+            {
+                this.Shown += (s, e) => OpenFilesFromPaths(filesToOpen);
+            }
         }
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 1.1b";
+            this.Text = "n+ - V 1.1g";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -600,6 +609,22 @@ namespace nplus
             };
             btnJsonTree.Click += (s, e) => ToggleJsonPanel();
 
+            btnHexToggle = new ToolStripButton()
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                Image = IconFromBase64(_ico_hextoggle),
+                ToolTipText = "Toggle Hex / Text View on Active Tab",
+                CheckOnClick = true
+            };
+            btnHexToggle.Click += (s, e) =>
+            {
+                if (!ToggleHexView(btnHexToggle.Checked))
+                {
+                    // Revert visual state if the toggle was aborted (no tab, or user cancelled).
+                    btnHexToggle.Checked = !btnHexToggle.Checked;
+                }
+            };
+
             btnFindInFiles = new ToolStripButton()
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image,
@@ -637,7 +662,7 @@ namespace nplus
                 btnSave, btnSaveAll, btnRevert, new ToolStripSeparator(),
                 btnShowChars, btnIndentGuide, btnWordWrap, btnColSelect, new ToolStripSeparator(),
                 btnUndo, btnRecord, btnStopRecord, btnPlayMacro, new ToolStripSeparator(),
-                btnLiveMonitor, btnJsonTree, btnFindInFiles, new ToolStripSeparator(),
+                btnLiveMonitor, btnJsonTree, btnHexToggle, btnFindInFiles, new ToolStripSeparator(),
                 btnThemeToggle, btnHelp
             });
 
@@ -687,6 +712,8 @@ namespace nplus
                 if (tcDocuments.SelectedTab != null)
                 {
                     btnLiveMonitor.Checked = _fileWatchers.ContainsKey(tcDocuments.SelectedTab);
+                    btnHexToggle.Checked = tcDocuments.SelectedTab.Controls.Count > 0
+                                           && tcDocuments.SelectedTab.Controls[0] is HexBox;
                     UpdateEncodingStatusLabel(GetTabEncoding(tcDocuments.SelectedTab));
                 }
 
@@ -1747,10 +1774,12 @@ namespace nplus
                 if (page.Controls.Count > 0)
                 {
                     var existing = page.Controls[0];
+                    if (existing is HexBox oldHex && oldHex.ByteProvider is IDisposable disp) disp.Dispose();
                     page.Controls.Remove(existing);
                     existing.Dispose();
                 }
-                editor = new Scintilla { Dock = DockStyle.Fill };
+                editor = new Scintilla { Dock = DockStyle.Fill, Tag = path };
+                ConfigureScintillaForTab(editor, page);
                 page.Controls.Add(editor);
             }
 
@@ -1816,10 +1845,23 @@ namespace nplus
             // Remove any existing control (a Scintilla placeholder is typically pre-added by AddNewTab).
             foreach (Control existing in page.Controls.Cast<Control>().ToList())
             {
+                if (existing is HexBox oldHex && oldHex.ByteProvider is IDisposable disp) disp.Dispose();
                 page.Controls.Remove(existing);
                 existing.Dispose();
             }
 
+            var hex = CreateConfiguredHexBox(bytes, path, page);
+            page.Controls.Add(hex);
+            page.Text = Path.GetFileName(path);
+
+            UpdateToolbarState();
+            StartFileChangeWatch(page, path);
+        }
+
+        // Builds a HexBox already wired with theme, dirty-state notification, and drop handling.
+        // Shared by LoadBinaryFileIntoTab and the Hex/Text toggle.
+        private HexBox CreateConfiguredHexBox(byte[] bytes, string path, TabPage page)
+        {
             var provider = new DynamicByteProvider(bytes);
             var hex = new HexBox
             {
@@ -1862,11 +1904,81 @@ namespace nplus
                     OpenFilesFromPaths(e.Data.GetData(DataFormats.FileDrop) as string[]);
             };
 
-            page.Controls.Add(hex);
-            page.Text = Path.GetFileName(path);
+            return hex;
+        }
 
+        // Switches the active tab between Scintilla (text) and HexBox (hex). Returns false if the
+        // toggle was aborted (no tab, or user cancelled the destructive-conversion prompt) so the
+        // caller can revert the toolbar button's visual state.
+        private bool ToggleHexView(bool toHex)
+        {
+            var page = tcDocuments.SelectedTab;
+            if (page == null || page.Controls.Count == 0) return false;
+
+            var control = page.Controls[0];
+            bool isCurrentlyHex = control is HexBox;
+            if (toHex == isCurrentlyHex) return true; // already in target view
+
+            bool wasDirty = page.Text.EndsWith("*");
+            string baseTitle = wasDirty ? page.Text.TrimEnd('*') : page.Text;
+            var encoding = GetTabEncoding(page) ?? new UTF8Encoding(false);
+
+            if (toHex)
+            {
+                // Text → Hex
+                var editor = (Scintilla)control;
+                string path = editor.Tag as string;
+                byte[] bytes;
+                try { bytes = encoding.GetBytes(editor.Text); }
+                catch { bytes = Encoding.UTF8.GetBytes(editor.Text); }
+
+                page.Controls.Remove(editor);
+                editor.Dispose();
+
+                var hex = CreateConfiguredHexBox(bytes, path, page);
+                page.Controls.Add(hex);
+            }
+            else
+            {
+                // Hex → Text
+                var hex = (HexBox)control;
+                byte[] bytes = GetHexBoxBytes(hex);
+
+                // Warn before a potentially lossy conversion: null bytes won't round-trip
+                // through a save in most text encodings, and the user may not realize that
+                // toggling out of hex view can drop data on the next save.
+                if (Array.IndexOf(bytes, (byte)0) >= 0)
+                {
+                    var ans = MessageBox.Show(
+                        "This tab contains null bytes (0x00). Switching to text view may lose data if you save the file afterwards.\n\nProceed?",
+                        "n+ — Switch to Text View",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+                    if (ans != DialogResult.Yes) return false;
+                }
+
+                string path = hex.Tag as string;
+                string text;
+                try { text = encoding.GetString(bytes); }
+                catch { text = Encoding.UTF8.GetString(bytes); }
+
+                if (hex.ByteProvider is IDisposable disp) disp.Dispose();
+                page.Controls.Remove(hex);
+                hex.Dispose();
+
+                var editor = new Scintilla { Dock = DockStyle.Fill, Tag = path };
+                ConfigureScintillaForTab(editor, page);
+                page.Controls.Add(editor);
+                editor.Text = text;
+                editor.EmptyUndoBuffer();
+                if (!wasDirty) editor.SetSavePoint();
+                UpdateStatusBar(editor);
+            }
+
+            // The control swap may have lost the dirty marker — restore it explicitly.
+            page.Text = wasDirty ? baseTitle + "*" : baseTitle;
             UpdateToolbarState();
-            StartFileChangeWatch(page, path);
+            return true;
         }
 
         private void ApplyHexBoxTheme(HexBox hex)
@@ -3282,6 +3394,26 @@ namespace nplus
             TabPage page = new TabPage(title);
             Scintilla editor = new Scintilla { Dock = DockStyle.Fill, Tag = path };
 
+            ConfigureScintillaForTab(editor, page);
+
+            page.Controls.Add(editor);
+            tcDocuments.TabPages.Add(page);
+            tcDocuments.SelectedTab = page;
+
+            if (!_tabEncodings.ContainsKey(page))
+                _tabEncodings[page] = new UTF8Encoding(false);
+            UpdateEncodingStatusLabel(GetTabEncoding(page));
+
+            UpdateToolbarState();
+            UpdateStatusBar(editor);
+        }
+
+        // Wires every event hook, view setting, and lexer that a Scintilla in a tab needs.
+        // Shared by AddNewTab, the hex→text swap in LoadFileIntoEditor, and the Hex/Text toggle —
+        // so a Scintilla created outside AddNewTab still gets status-bar updates, macros, dirty
+        // tracking, etc.
+        private void ConfigureScintillaForTab(Scintilla editor, TabPage page)
+        {
             // Accept files dropped directly onto the editor (overrides Scintilla's default
             // behavior of inserting the dropped path as text).
             editor.AllowDrop = true;
@@ -3402,7 +3534,7 @@ namespace nplus
             editor.AdditionalSelectionTyping = true;
             editor.DirectMessage(2422, new IntPtr(btnColSelect.Checked ? 1 : 0), IntPtr.Zero);
 
-            ApplySyntaxHighlighting(editor, path);
+            ApplySyntaxHighlighting(editor, editor.Tag as string);
 
             editor.TextChanged += (s, e) =>
             {
@@ -3412,20 +3544,6 @@ namespace nplus
                     if (tcDocuments.SelectedTab == page) UpdateToolbarState();
                 }
             };
-
-            page.Controls.Add(editor);
-            tcDocuments.TabPages.Add(page);
-            tcDocuments.SelectedTab = page;
-
-            // Default encoding for new tabs
-            if (!_tabEncodings.ContainsKey(page))
-                _tabEncodings[page] = new UTF8Encoding(false);
-            UpdateEncodingStatusLabel(GetTabEncoding(page));
-
-            UpdateToolbarState();
-
-            // Force an initial update of the status bar when the new tab is created
-            UpdateStatusBar(editor);
         }
 
         private void UpdateStatusBar(Scintilla editor)

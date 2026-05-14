@@ -6,11 +6,11 @@ namespace nplus
     static class Program
     {
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new EditorForm());
+            Application.Run(new EditorForm(args));
         }
     }
 }
