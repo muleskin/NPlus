@@ -3,16 +3,16 @@
   "WorkspaceRootPath": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|c:\\users\\jedd\\desktop\\developing\\nplus\\editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\editorstyler..cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -26,7 +26,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 7,
           "Children": [
             {
               "$type": "Bookmark",
@@ -54,20 +54,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "EditorForm.cs",
               "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\EditorForm.cs",
               "RelativeDocumentMoniker": "EditorForm.cs",
               "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\EditorForm.cs",
               "RelativeToolTip": "EditorForm.cs",
-              "ViewState": "AgIAAAEBAAAAAAAAAAAqwDIBAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAgBAAAAAAAAAAAqwDIBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-04-27T02:04:15.967Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "FindReplaceDialog.cs",
               "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\FindReplaceDialog.cs",
               "RelativeDocumentMoniker": "FindReplaceDialog.cs",
@@ -75,7 +75,8 @@
               "RelativeToolTip": "FindReplaceDialog.cs",
               "ViewState": "AgIAAJUCAAAAAAAAAAAqwL8CAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-21T14:03:25.193Z"
+              "WhenOpened": "2026-04-21T14:03:25.193Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -91,7 +92,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",

@@ -1,4 +1,5 @@
 ﻿using Be.Windows.Forms;
+using Microsoft.Win32;
 using ScintillaNET;
 using System;
 using System.Collections.Generic;
@@ -307,7 +308,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 1.1g";
+            this.Text = "n+ - V 1.2e";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -452,6 +453,11 @@ namespace nplus
             jsonMenu.DropDownItems.Add("Format / Pretty Print JSON", null, (s, e) => FormatJson());
             jsonMenu.DropDownItems.Add("View JSON in Visual Tree", null, (s, e) => ShowJsonTree());
             toolsMenu.DropDownItems.Add(jsonMenu);
+
+            var shellMenu = new ToolStripMenuItem("Windows Integration");
+            shellMenu.DropDownItems.Add("Register 'Open with n+' in Right-Click Menu", null, (s, e) => RegisterShellMenu());
+            shellMenu.DropDownItems.Add("Unregister 'Open with n+' from Right-Click Menu", null, (s, e) => UnregisterShellMenu());
+            toolsMenu.DropDownItems.Add(shellMenu);
 
             var helpMenu = new ToolStripMenuItem("Help");
             helpMenu.DropDownItems.Add("User's Guide", null, (s, e) => ShowUserGuide());
@@ -2034,6 +2040,55 @@ namespace nplus
         }
 
         #region UI & Toolbar Functionality
+
+        // Registry path under HKCU. Using HKCU avoids any UAC prompt and is per-user.
+        private const string ShellMenuRegPath = @"Software\Classes\*\shell\OpenWithNPlus";
+        private const string ShellMenuCommandRegPath = @"Software\Classes\*\shell\OpenWithNPlus\command";
+
+        private void RegisterShellMenu()
+        {
+            try
+            {
+                string exePath = Application.ExecutablePath;
+
+                using (var key = Registry.CurrentUser.CreateSubKey(ShellMenuRegPath))
+                {
+                    if (key == null) throw new InvalidOperationException("Could not create registry key.");
+                    key.SetValue(string.Empty, "Open with n+");
+                    key.SetValue("Icon", "\"" + exePath + "\",0");
+                }
+                using (var cmd = Registry.CurrentUser.CreateSubKey(ShellMenuCommandRegPath))
+                {
+                    if (cmd == null) throw new InvalidOperationException("Could not create registry command key.");
+                    cmd.SetValue(string.Empty, "\"" + exePath + "\" \"%1\"");
+                }
+
+                MessageBox.Show(
+                    "'Open with n+' has been added to the right-click menu for all files (current user only).\n\nYou may need to restart Explorer or sign out and back in for the entry to appear everywhere.",
+                    "Windows Integration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not register the right-click menu entry:\n\n" + ex.Message,
+                    "Windows Integration", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UnregisterShellMenu()
+        {
+            try
+            {
+                Registry.CurrentUser.DeleteSubKeyTree(ShellMenuRegPath, throwOnMissingSubKey: false);
+                MessageBox.Show(
+                    "'Open with n+' has been removed from the right-click menu.",
+                    "Windows Integration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not remove the right-click menu entry:\n\n" + ex.Message,
+                    "Windows Integration", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
         private void ShowUserGuide()
         {
@@ -3760,7 +3815,7 @@ namespace nplus
             }
         }
 
-        private void OpenFilesFromPaths(string[] paths)
+        internal void OpenFilesFromPaths(string[] paths)
         {
             if (paths == null || paths.Length == 0) return;
 
