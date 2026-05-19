@@ -180,6 +180,8 @@ namespace nplus
 
         // NEW: Live File Monitoring State
         private Dictionary<TabPage, FileSystemWatcher> _fileWatchers = new Dictionary<TabPage, FileSystemWatcher>();
+        private Dictionary<TabPage, long> _liveMonitorOffsets = new Dictionary<TabPage, long>();
+        private Dictionary<TabPage, FileChangedPrompt> _fileChangePrompts = new Dictionary<TabPage, FileChangedPrompt>();
         // General file change detection (prompts user on external changes/deletions)
         private Dictionary<TabPage, FileSystemWatcher> _fileChangeWatchers = new Dictionary<TabPage, FileSystemWatcher>();
         private bool _isSwitchingTabs = false;
@@ -308,7 +310,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 1.2e";
+            this.Text = "n+ - V 1.3f";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -868,15 +870,24 @@ namespace nplus
                     return;
                 }
 
-                // Create a background watcher for this specific file
+                // Record the current file length as the tail start so the next
+                // Changed event only reads new bytes appended after this point.
+                try { _liveMonitorOffsets[page] = new FileInfo(path).Length; }
+                catch { _liveMonitorOffsets[page] = 0; }
+
+                // Create a background watcher for this specific file. Grow the
+                // internal buffer to 64 KB so high-rate writers don't overflow
+                // it during burst log activity (default is 8 KB).
                 var watcher = new FileSystemWatcher
                 {
                     Path = Path.GetDirectoryName(path),
                     Filter = Path.GetFileName(path),
-                    NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size
+                    NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size,
+                    InternalBufferSize = 65536
                 };
 
                 watcher.Changed += Fsw_Changed;
+                watcher.Error += Fsw_Error;
                 watcher.EnableRaisingEvents = true;
 
                 // Track the watcher so we can clean it up later
@@ -889,9 +900,11 @@ namespace nplus
                 {
                     watcher.EnableRaisingEvents = false;
                     watcher.Changed -= Fsw_Changed;
+                    watcher.Error -= Fsw_Error;
                     watcher.Dispose();
                     _fileWatchers.Remove(page);
                 }
+                _liveMonitorOffsets.Remove(page);
             }
 
             tcDocuments.Invalidate(); // Refresh the UI to immediately apply the green tab color
@@ -899,8 +912,9 @@ namespace nplus
 
         private void Fsw_Changed(object sender, FileSystemEventArgs e)
         {
-            // This event runs on a background thread. Delay briefly to let the writing application release its file lock.
-            System.Threading.Thread.Sleep(100);
+            // This event runs on a background thread. Delay briefly to let the
+            // writing application release its file lock.
+            System.Threading.Thread.Sleep(50);
 
             // Find out which TabPage this watcher belongs to
             TabPage targetPage = null;
@@ -912,47 +926,141 @@ namespace nplus
                     break;
                 }
             }
-
             if (targetPage == null) return;
 
-            // Push the update back to the main UI thread safely
+            // Read whatever's new on the background thread so the UI doesn't stall
+            // while large appends are decoded. Hold the offset lock across the
+            // entire read so concurrent FSW events can't replay the same bytes
+            // and emit duplicates in the editor.
+            string newText = null;
+            bool resetEditor = false;
+            long newOffset = 0;
+            lock (_liveMonitorOffsets)
+            {
+                if (!_liveMonitorOffsets.TryGetValue(targetPage, out long startOffset)) startOffset = 0;
+
+                try
+                {
+                    using (var fs = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                    {
+                        long currentLen = fs.Length;
+
+                        if (currentLen < startOffset)
+                        {
+                            // File was truncated or rotated — reload from scratch.
+                            resetEditor = true;
+                            startOffset = 0;
+                        }
+                        else if (currentLen == startOffset)
+                        {
+                            // No new bytes (LastWrite-only touch, or duplicate event).
+                            return;
+                        }
+
+                        fs.Seek(startOffset, SeekOrigin.Begin);
+                        var enc = GetTabEncoding(targetPage) ?? Encoding.UTF8;
+                        // detectEncodingFromByteOrderMarks: false — we already know
+                        // the encoding, and we don't want a BOM mid-stream to mis-trigger.
+                        using (var sr = new StreamReader(fs, enc, detectEncodingFromByteOrderMarks: false, bufferSize: 8192, leaveOpen: true))
+                        {
+                            newText = sr.ReadToEnd();
+                        }
+                        newOffset = currentLen;
+                        _liveMonitorOffsets[targetPage] = newOffset;
+                    }
+                }
+                catch
+                {
+                    // Read failed (sharing violation mid-write, deletion, etc.). The
+                    // next Changed event will retry — leave the offset untouched.
+                    return;
+                }
+            }
+
+            if (string.IsNullOrEmpty(newText) && !resetEditor) return;
+
             this.BeginInvoke((MethodInvoker)delegate
             {
                 if (!tcDocuments.TabPages.Contains(targetPage)) return;
                 var editor = targetPage.Controls[0] as Scintilla;
                 if (editor == null) return;
 
+                bool wasReadOnly = editor.ReadOnly;
+                if (wasReadOnly) editor.ReadOnly = false;
                 try
                 {
-                    // Read file safely, allowing other applications concurrent access.
-                    // Use the tab's detected encoding so non-UTF-8 files (e.g. BOM-less
-                    // UTF-16 logs) reload correctly instead of being parsed as UTF-8.
-                    var enc = GetTabEncoding(targetPage) ?? Encoding.UTF8;
-                    using (var fs = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                    using (var sr = new StreamReader(fs, enc, detectEncodingFromByteOrderMarks: true))
+                    if (resetEditor)
                     {
-                        string text = sr.ReadToEnd();
+                        editor.Text = newText ?? string.Empty;
+                    }
+                    else
+                    {
+                        editor.AppendText(newText);
+                    }
 
-                        // Temporarily lift read-only so the text can be updated
-                        bool wasReadOnly = editor.ReadOnly;
-                        if (wasReadOnly) editor.ReadOnly = false;
+                    // Tail behavior: scroll to bottom so new lines are always visible.
+                    editor.GotoPosition(editor.TextLength);
+                    editor.ScrollCaret();
 
-                        editor.Text = text;
+                    targetPage.Text = Path.GetFileName(e.FullPath) + (wasReadOnly ? " [READ-ONLY]" : "");
+                    editor.SetSavePoint();
+                }
+                finally
+                {
+                    if (wasReadOnly) editor.ReadOnly = true;
+                }
+            });
+        }
 
-                        // Always scroll to the bottom during live monitoring so the user
-                        // can tail log files without having to manually scroll down.
-                        editor.GotoPosition(editor.TextLength);
-                        editor.ScrollCaret();
+        private void Fsw_Error(object sender, ErrorEventArgs e)
+        {
+            // FileSystemWatcher's internal buffer overflowed (typical when a log
+            // writer dumps many lines faster than events can be drained). Find
+            // the affected page, re-sync the offset to the current file length,
+            // and continue tailing. The watcher keeps running automatically.
+            TabPage targetPage = null;
+            foreach (var kvp in _fileWatchers)
+            {
+                if (kvp.Value == sender) { targetPage = kvp.Key; break; }
+            }
+            if (targetPage == null) return;
 
-                        // Clear the "Unsaved" asterisk since we just pulled the latest disk copy
-                        targetPage.Text = Path.GetFileName(e.FullPath);
-                        if (wasReadOnly) targetPage.Text += " [READ-ONLY]";
-                        editor.SetSavePoint();
+            this.BeginInvoke((MethodInvoker)delegate
+            {
+                if (!tcDocuments.TabPages.Contains(targetPage)) return;
+                var editor = targetPage.Controls[0] as Scintilla;
+                if (editor == null) return;
+                string path = editor.Tag as string;
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
 
-                        if (wasReadOnly) editor.ReadOnly = true;
+                try
+                {
+                    long startOffset;
+                    lock (_liveMonitorOffsets)
+                    {
+                        if (!_liveMonitorOffsets.TryGetValue(targetPage, out startOffset)) startOffset = 0;
+                    }
+
+                    using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                    {
+                        long currentLen = fs.Length;
+                        if (currentLen <= startOffset) return;
+                        fs.Seek(startOffset, SeekOrigin.Begin);
+                        var enc = GetTabEncoding(targetPage) ?? Encoding.UTF8;
+                        using (var sr = new StreamReader(fs, enc, detectEncodingFromByteOrderMarks: false))
+                        {
+                            string missed = sr.ReadToEnd();
+                            bool wasReadOnly = editor.ReadOnly;
+                            if (wasReadOnly) editor.ReadOnly = false;
+                            try { editor.AppendText(missed); }
+                            finally { if (wasReadOnly) editor.ReadOnly = true; }
+                            editor.GotoPosition(editor.TextLength);
+                            editor.ScrollCaret();
+                        }
+                        lock (_liveMonitorOffsets) { _liveMonitorOffsets[targetPage] = currentLen; }
                     }
                 }
-                catch { /* Wait silently; FSW usually fires multiple times, the next one will succeed when the lock lifts */ }
+                catch { /* Best-effort recovery; the next Changed event will continue tailing. */ }
             });
         }
 
@@ -1040,16 +1148,16 @@ namespace nplus
 
         private void HandleFileChanged(object sender, FileSystemEventArgs e)
         {
-            if (_fileChangePromptActive) return;
-
             var page = FindPageForChangeWatcher(sender);
             if (page == null || !tcDocuments.TabPages.Contains(page)) return;
-            if (_fileWatchers.ContainsKey(page)) return;
+            if (_fileWatchers.ContainsKey(page)) return;            // live monitor already running
+            if (_fileChangePrompts.ContainsKey(page)) return;        // prompt already up for this tab
 
             var editor = page.Controls[0] as Scintilla;
             if (editor == null) return;
 
-            // Disable watcher while prompt is open
+            // Suspend the change watcher while the prompt is showing so further
+            // writes don't queue more events. Re-armed when the user picks Ignore.
             try
             {
                 if (_fileChangeWatchers.TryGetValue(page, out var w))
@@ -1057,30 +1165,47 @@ namespace nplus
             }
             catch (ObjectDisposedException) { return; }
 
-            _fileChangePromptActive = true;
-            try
-            {
-                var res = MessageBox.Show(
-                    $"The file \"{Path.GetFileName(e.FullPath)}\" has been modified by another program.\n\nDo you want to reload it?",
-                    "n+ - File Changed", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            string fullPath = e.FullPath;
+            var prompt = new FileChangedPrompt(Path.GetFileName(fullPath));
+            _fileChangePrompts[page] = prompt;
 
-                if (res == DialogResult.Yes)
+            prompt.FormClosed += (s, ev) =>
+            {
+                _fileChangePrompts.Remove(page);
+                if (!tcDocuments.TabPages.Contains(page)) return;
+
+                switch (prompt.Choice)
                 {
-                    try { LoadFileIntoEditor(editor, page, e.FullPath); }
-                    catch { /* Ignore read errors */ }
+                    case FileChangedPrompt.Result.Reload:
+                        // LoadFileIntoEditor restarts the change watcher itself.
+                        try { LoadFileIntoEditor(editor, page, fullPath); } catch { }
+                        break;
+
+                    case FileChangedPrompt.Result.LiveMonitor:
+                        // Switch this tab to live tail mode. The change-watcher
+                        // stays suspended — live monitor takes over via _fileWatchers.
+                        tcDocuments.SelectedTab = page;
+                        _isSwitchingTabs = true;
+                        btnLiveMonitor.Checked = true;
+                        _isSwitchingTabs = false;
+                        ToggleLiveMonitor(true);
+                        break;
+
+                    case FileChangedPrompt.Result.Ignore:
+                    default:
+                        // Re-arm the change watcher so the user gets prompted again
+                        // on the next external edit.
+                        try
+                        {
+                            if (_fileChangeWatchers.TryGetValue(page, out var w2))
+                                w2.EnableRaisingEvents = true;
+                        }
+                        catch (ObjectDisposedException) { }
+                        break;
                 }
-                else
-                {
-                    // Re-enable watcher
-                    try
-                    {
-                        if (_fileChangeWatchers.TryGetValue(page, out var w2))
-                            w2.EnableRaisingEvents = true;
-                    }
-                    catch (ObjectDisposedException) { }
-                }
-            }
-            finally { _fileChangePromptActive = false; }
+            };
+
+            prompt.Show(this);
         }
 
         private void HandleFileDeleted(object sender, FileSystemEventArgs e)
@@ -3853,8 +3978,17 @@ namespace nplus
             {
                 watcher.EnableRaisingEvents = false;
                 watcher.Changed -= Fsw_Changed;
+                watcher.Error -= Fsw_Error;
                 watcher.Dispose();
                 _fileWatchers.Remove(page);
+            }
+            _liveMonitorOffsets.Remove(page);
+
+            // Force-close any open external-change prompt tied to this tab
+            if (_fileChangePrompts.TryGetValue(page, out var prompt))
+            {
+                _fileChangePrompts.Remove(page);
+                try { prompt.Close(); } catch { }
             }
 
             // Clean up file change detection watcher
@@ -4306,5 +4440,46 @@ namespace nplus
         }
         #endregion
 
+    }
+
+    internal sealed class FileChangedPrompt : Form
+    {
+        public enum Result { Ignore, Reload, LiveMonitor }
+        public Result Choice { get; private set; } = Result.Ignore;
+
+        public FileChangedPrompt(string fileName)
+        {
+            Text = "n+ - File Changed";
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            StartPosition = FormStartPosition.CenterParent;
+            ShowInTaskbar = false;
+            ClientSize = new Size(460, 140);
+
+            var label = new Label
+            {
+                Text = $"The file \"{fileName}\" has been modified by another program.\n\nWhat would you like to do?",
+                Location = new Point(15, 15),
+                Size = new Size(430, 60),
+                AutoSize = false
+            };
+
+            var btnReload = new Button { Text = "Reload", Location = new Point(70, 90), Size = new Size(100, 30) };
+            btnReload.Click += (s, e) => { Choice = Result.Reload; Close(); };
+
+            var btnLive = new Button { Text = "Live Monitor", Location = new Point(180, 90), Size = new Size(110, 30) };
+            btnLive.Click += (s, e) => { Choice = Result.LiveMonitor; Close(); };
+
+            var btnIgnore = new Button { Text = "Ignore", Location = new Point(300, 90), Size = new Size(100, 30) };
+            btnIgnore.Click += (s, e) => { Choice = Result.Ignore; Close(); };
+
+            Controls.Add(label);
+            Controls.Add(btnReload);
+            Controls.Add(btnLive);
+            Controls.Add(btnIgnore);
+            AcceptButton = btnReload;
+            CancelButton = btnIgnore;
+        }
     }
 }

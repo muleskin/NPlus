@@ -3,11 +3,11 @@
   "WorkspaceRootPath": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|c:\\users\\jedd\\desktop\\developing\\nplus\\findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|c:\\users\\jedd\\desktop\\developing\\nplus\\editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -62,8 +62,7 @@
               "RelativeToolTip": "EditorForm.cs",
               "ViewState": "AgIAAAgBAAAAAAAAAAAqwDIBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-27T02:04:15.967Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-04-27T02:04:15.967Z"
             },
             {
               "$type": "Document",
