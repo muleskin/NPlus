@@ -229,6 +229,13 @@ namespace nplus
         private bool _showCharacters = false;
         private bool _showIndentGuides = false;
         private bool _restoreMaximized = false;
+        private bool _checkForUpdatesOnStartup = true;
+
+        // GitHub repository used by the update checker.
+        private const string UpdateGitHubOwner = "muleskin";
+        private const string UpdateGitHubRepo = "NPlus";
+        private ToolStripMenuItem _checkOnStartupMenuItem;
+        private static readonly System.Net.Http.HttpClient _updateHttp = new System.Net.Http.HttpClient();
         private float _zoomLevel = 1.0f;
         private const float ZoomStep = 0.1f;
         private const float ZoomMin = 0.5f;
@@ -306,11 +313,16 @@ namespace nplus
             {
                 this.Shown += (s, e) => OpenFilesFromPaths(filesToOpen);
             }
+
+            this.Shown += (s, e) =>
+            {
+                if (_checkForUpdatesOnStartup) CheckForUpdates(manual: false);
+            };
         }
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 1.3h";
+            this.Text = "n+ - V 1.3r";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -463,6 +475,19 @@ namespace nplus
 
             var helpMenu = new ToolStripMenuItem("Help");
             helpMenu.DropDownItems.Add("User's Guide", null, (s, e) => ShowUserGuide());
+            helpMenu.DropDownItems.Add("-");
+            helpMenu.DropDownItems.Add("Check for Updates", null, (s, e) => CheckForUpdates(manual: true));
+            _checkOnStartupMenuItem = new ToolStripMenuItem("Check on Startup")
+            {
+                CheckOnClick = true,
+                Checked = _checkForUpdatesOnStartup
+            };
+            _checkOnStartupMenuItem.CheckedChanged += (s, e) =>
+            {
+                _checkForUpdatesOnStartup = _checkOnStartupMenuItem.Checked;
+                SaveSettings();
+            };
+            helpMenu.DropDownItems.Add(_checkOnStartupMenuItem);
 
             _encodingMenu = new ToolStripMenuItem("Encoding");
             _encodingMenu.DropDownItems.Add("ANSI", null, (s, e) => SetEncoding("ANSI"));
@@ -1337,6 +1362,11 @@ namespace nplus
                         if (zoom >= ZoomMin && zoom <= ZoomMax) _zoomLevel = zoom;
                     }
                 }
+                if (lines.Length >= 11)
+                {
+                    bool checkUpdates;
+                    if (bool.TryParse(lines[10], out checkUpdates)) _checkForUpdatesOnStartup = checkUpdates;
+                }
             }
             catch { /* Ignore corrupt settings file */ }
         }
@@ -1737,7 +1767,8 @@ namespace nplus
                     bounds.Width.ToString(),
                     bounds.Height.ToString(),
                     (this.WindowState == FormWindowState.Maximized).ToString(),
-                    _zoomLevel.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    _zoomLevel.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    _checkForUpdatesOnStartup.ToString()
                 });
             }
             catch { /* Ignore write errors */ }
@@ -2213,6 +2244,168 @@ namespace nplus
                 MessageBox.Show("Could not remove the right-click menu entry:\n\n" + ex.Message,
                     "Windows Integration", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        // ---- Update Checker ----------------------------------------------------
+        // Hits the GitHub releases/latest endpoint, compares the tag against the
+        // running assembly version, and (if a newer release is available) offers
+        // to open the release page in the user's browser.
+
+        private async void CheckForUpdates(bool manual)
+        {
+            string releaseUrl = null;
+            string tagName = null;
+            string errorMessage = null;
+
+            // Skip the HTTP call entirely if the machine looks offline. Silent on
+            // auto-startup; manual checks get a friendly "no internet" notice.
+            if (!await IsInternetAvailableAsync().ConfigureAwait(true))
+            {
+                if (manual)
+                {
+                    MessageBox.Show("No internet connection is available. Please connect and try again.",
+                        "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                return;
+            }
+
+            try
+            {
+                string apiUrl = $"https://api.github.com/repos/{UpdateGitHubOwner}/{UpdateGitHubRepo}/releases/latest";
+
+                // GitHub rejects requests without a User-Agent header.
+                var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, apiUrl);
+                req.Headers.UserAgent.Clear();
+                req.Headers.UserAgent.TryParseAdd($"nplus/{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}");
+                req.Headers.Accept.TryParseAdd("application/vnd.github+json");
+
+                // TLS 1.2 isn't on by default for older .NET Framework configs.
+                try { System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12; } catch { }
+
+                using (var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(8)))
+                {
+                    var resp = await _updateHttp.SendAsync(req, cts.Token).ConfigureAwait(true);
+                    if (!resp.IsSuccessStatusCode)
+                    {
+                        errorMessage = $"GitHub returned HTTP {(int)resp.StatusCode} {resp.ReasonPhrase}.";
+                    }
+                    else
+                    {
+                        string json = await resp.Content.ReadAsStringAsync().ConfigureAwait(true);
+                        using (var doc = System.Text.Json.JsonDocument.Parse(json))
+                        {
+                            var root = doc.RootElement;
+                            if (root.TryGetProperty("tag_name", out var t)) tagName = t.GetString();
+                            if (root.TryGetProperty("html_url", out var u)) releaseUrl = u.GetString();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+            }
+
+            if (errorMessage != null)
+            {
+                if (manual)
+                {
+                    MessageBox.Show("Could not check for updates:\n\n" + errorMessage,
+                        "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                return;
+            }
+
+            if (string.IsNullOrEmpty(tagName))
+            {
+                if (manual) MessageBox.Show("No release was found on the GitHub repository.",
+                    "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            Version latest = ParseVersionTag(tagName);
+            Version current = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0, 0);
+
+            if (latest == null)
+            {
+                if (manual) MessageBox.Show($"Could not parse the release tag \"{tagName}\".",
+                    "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (NormalizeVersion(latest) > NormalizeVersion(current))
+            {
+                string msg = $"A newer version of n+ is available.\n\nCurrent: {current}\nLatest:  {tagName}\n\nOpen the GitHub release page?";
+                var res = MessageBox.Show(msg, "Update Available", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                if (res == DialogResult.Yes && !string.IsNullOrEmpty(releaseUrl))
+                {
+                    try { System.Diagnostics.Process.Start(releaseUrl); } catch { }
+                }
+            }
+            else if (manual)
+            {
+                MessageBox.Show($"You are running the latest version ({current}).",
+                    "Check for Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        // Lightweight connectivity probe: confirms a network interface is up,
+        // then resolves api.github.com via DNS with a short timeout. Avoids the
+        // long HTTP timeout when the machine is plainly offline.
+        private static async System.Threading.Tasks.Task<bool> IsInternetAvailableAsync()
+        {
+            try
+            {
+                if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+                    return false;
+            }
+            catch { return false; }
+
+            try
+            {
+                var dnsTask = System.Threading.Tasks.Task.Run(() => System.Net.Dns.GetHostAddresses("api.github.com"));
+                var completed = await System.Threading.Tasks.Task.WhenAny(dnsTask, System.Threading.Tasks.Task.Delay(3000)).ConfigureAwait(false);
+                if (completed != dnsTask) return false;
+                var addresses = await dnsTask.ConfigureAwait(false);
+                return addresses != null && addresses.Length > 0;
+            }
+            catch { return false; }
+        }
+
+        private static Version ParseVersionTag(string tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag)) return null;
+            string t = tag.Trim();
+            if (t.StartsWith("v", StringComparison.OrdinalIgnoreCase) || t.StartsWith("V")) t = t.Substring(1);
+            // Strip anything after a '-' or '+' (e.g. "1.3.8-beta", "1.3.8+abc")
+            int cut = t.IndexOfAny(new[] { '-', '+', ' ' });
+            if (cut > 0) t = t.Substring(0, cut);
+
+            // Map a trailing letter suffix back to a number using the same
+            // a=1, b=2, ..., z=26 scheme used in AssemblyInfo.cs.
+            // e.g. "1.3f" -> "1.3.6", "1.3.5b" -> "1.3.5.2".
+            if (t.Length > 0 && char.IsLetter(t[t.Length - 1]))
+            {
+                char letter = char.ToLowerInvariant(t[t.Length - 1]);
+                if (letter >= 'a' && letter <= 'z')
+                {
+                    int letterValue = letter - 'a' + 1;
+                    string head = t.Substring(0, t.Length - 1);
+                    if (head.Length > 0 && !head.EndsWith(".")) head += ".";
+                    t = head + letterValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
+            }
+
+            return Version.TryParse(t, out var v) ? v : null;
+        }
+
+        private static Version NormalizeVersion(Version v)
+        {
+            return new Version(
+                Math.Max(0, v.Major),
+                Math.Max(0, v.Minor),
+                Math.Max(0, v.Build),
+                Math.Max(0, v.Revision));
         }
 
         private void ShowUserGuide()
