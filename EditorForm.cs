@@ -310,7 +310,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 1.3f";
+            this.Text = "n+ - V 1.3h";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -3759,9 +3759,10 @@ namespace nplus
             var editor = page.Controls.Count > 0 ? page.Controls[0] as Scintilla : null;
             bool isReadOnly = editor != null && editor.ReadOnly;
             bool isUnsaved = page.Text.EndsWith("*");
-
-            // NEW: Check if this specific tab is currently being live-monitored
             bool isMonitored = _fileWatchers.ContainsKey(page);
+            bool isSelected = (e.Index == tcDocuments.SelectedIndex);
+            // Tabs that aren't the active one and aren't tailing a log get a muted look.
+            bool isInactive = !isSelected && !isMonitored;
 
             Brush fillBrush;
             bool isCustomBrush = true;
@@ -3777,9 +3778,14 @@ namespace nplus
                 // Reddish background for Read-Only
                 fillBrush = new SolidBrush(_isDarkMode ? Color.FromArgb(80, 40, 40) : Color.MistyRose);
             }
+            else if (isInactive)
+            {
+                // Greyed-out background for inactive tabs (matches the active theme).
+                fillBrush = new SolidBrush(_isDarkMode ? Color.FromArgb(34, 34, 36) : Color.FromArgb(222, 222, 222));
+            }
             else
             {
-                // Standard Colors
+                // Standard Colors (active tab)
                 if (_isDarkMode)
                 {
                     fillBrush = new SolidBrush(Color.FromArgb(45, 45, 48));
@@ -3791,7 +3797,11 @@ namespace nplus
                 }
             }
 
-            Color textColor = _isDarkMode ? Color.White : Color.Black;
+            Color textColor;
+            if (isInactive)
+                textColor = _isDarkMode ? Color.FromArgb(135, 135, 135) : Color.FromArgb(120, 120, 120);
+            else
+                textColor = _isDarkMode ? Color.White : Color.Black;
 
             // Draw the tab background
             e.Graphics.FillRectangle(fillBrush, rect);
@@ -3942,7 +3952,13 @@ namespace nplus
 
         internal void OpenFilesFromPaths(string[] paths)
         {
-            if (paths == null || paths.Length == 0) return;
+            if (paths == null || paths.Length == 0)
+            {
+                BringWindowToFront();
+                return;
+            }
+
+            TabPage lastOpened = null;
 
             foreach (string filePath in paths)
             {
@@ -3954,12 +3970,57 @@ namespace nplus
                     continue;
                 }
 
+                // If the file is already open in a tab, switch to it instead of opening a duplicate.
+                TabPage existing = FindTabByPath(filePath);
+                if (existing != null)
+                {
+                    lastOpened = existing;
+                    continue;
+                }
+
                 AddNewTab("Loading...", filePath);
                 LoadFileIntoEditor(GetActiveEditor(), tcDocuments.SelectedTab, filePath);
                 AddToRecentFiles(filePath);
+                lastOpened = tcDocuments.SelectedTab;
             }
 
+            if (lastOpened != null && tcDocuments.TabPages.Contains(lastOpened))
+                tcDocuments.SelectedTab = lastOpened;
+
+            BringWindowToFront();
+        }
+
+        private TabPage FindTabByPath(string filePath)
+        {
+            foreach (TabPage page in tcDocuments.TabPages)
+            {
+                if (page.Controls.Count == 0) continue;
+                var ctrl = page.Controls[0];
+                string openPath = (ctrl as Scintilla)?.Tag as string
+                                  ?? (ctrl as HexBox)?.Tag as string;
+                if (!string.IsNullOrEmpty(openPath)
+                    && string.Equals(openPath, filePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return page;
+                }
+            }
+            return null;
+        }
+
+        // Forces the form to the foreground even when launched while another app
+        // has focus. The TopMost flip is a well-known workaround for the OS rules
+        // that otherwise restrict SetForegroundWindow.
+        private void BringWindowToFront()
+        {
+            if (this.WindowState == FormWindowState.Minimized)
+                this.WindowState = _restoreMaximized ? FormWindowState.Maximized : FormWindowState.Normal;
+
+            bool wasTopMost = this.TopMost;
+            this.TopMost = true;
+            this.TopMost = wasTopMost;
             this.Activate();
+            this.BringToFront();
+            this.Focus();
         }
 
         private void CloseTab(int idx)
