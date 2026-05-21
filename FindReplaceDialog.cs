@@ -211,7 +211,13 @@ namespace nplus
             {
                 if (replace)
                 {
-                    if (editor.SelectedText == searchFor || (isRegex && Regex.IsMatch(editor.SelectedText, searchFor)))
+                    bool selMatches = editor.SelectedText == searchFor;
+                    if (!selMatches && isRegex)
+                    {
+                        try { selMatches = Regex.IsMatch(editor.SelectedText, searchFor, RegexOptions.None, TimeSpan.FromSeconds(5)); }
+                        catch { selMatches = false; }
+                    }
+                    if (selMatches)
                     {
                         if (isRegex) editor.ReplaceTargetRe(replaceWith);
                         else editor.ReplaceTarget(replaceWith);
@@ -574,10 +580,13 @@ namespace nplus
             RegexOptions regOpts = matchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
             StringComparison strComp = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 
+            // Cap regex execution time so a pathological user pattern
+            // (e.g. "(a+)+$") against a long file can't lock the UI thread.
+            var matchTimeout = TimeSpan.FromSeconds(5);
             Regex rx = null;
             if (useRegex)
             {
-                try { rx = new Regex(searchText, regOpts); }
+                try { rx = new Regex(searchText, regOpts, matchTimeout); }
                 catch (Exception ex)
                 {
                     lblStatus.ForeColor = Color.IndianRed;
@@ -587,7 +596,7 @@ namespace nplus
             }
             else if (wholeWord)
             {
-                rx = new Regex(@"\b" + Regex.Escape(searchText) + @"\b", regOpts);
+                rx = new Regex(@"\b" + Regex.Escape(searchText) + @"\b", regOpts, matchTimeout);
             }
 
             try

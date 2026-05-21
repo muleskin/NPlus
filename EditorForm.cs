@@ -235,7 +235,21 @@ namespace nplus
         private const string UpdateGitHubOwner = "muleskin";
         private const string UpdateGitHubRepo = "NPlus";
         private ToolStripMenuItem _checkOnStartupMenuItem;
-        private static readonly System.Net.Http.HttpClient _updateHttp = new System.Net.Http.HttpClient();
+        private static readonly System.Net.Http.HttpClient _updateHttp = BuildUpdateHttpClient();
+        private const int UpdateResponseMaxBytes = 1 * 1024 * 1024; // 1 MB; GitHub's release JSON is ~5 KB.
+
+        private static System.Net.Http.HttpClient BuildUpdateHttpClient()
+        {
+            // No automatic redirects: we expect the response to come from api.github.com
+            // itself. A 3xx pointing elsewhere would let an attacker shift where we read
+            // JSON from, so we treat redirects as failures.
+            var handler = new System.Net.Http.HttpClientHandler
+            {
+                AllowAutoRedirect = false,
+                UseCookies = false
+            };
+            return new System.Net.Http.HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
+        }
         private float _zoomLevel = 1.0f;
         private const float ZoomStep = 0.1f;
         private const float ZoomMin = 0.5f;
@@ -1919,11 +1933,29 @@ namespace nplus
             return false;
         }
 
+        // Soft size caps. Above these we ask the user before allocating the full
+        // file into memory; a multi-GB log would otherwise OOM the process.
+        private const long LargeTextFileWarnBytes = 100L * 1024 * 1024;     // 100 MB
+        private const long LargeBinaryFileWarnBytes = 256L * 1024 * 1024;   // 256 MB
+
         private void LoadFileIntoEditor(Scintilla editor, TabPage page, string path)
         {
             if (!File.Exists(path)) return;
 
-            if (IsBinaryFile(path))
+            bool isBinary = IsBinaryFile(path);
+            long size = -1;
+            try { size = new FileInfo(path).Length; } catch { }
+            long warnAt = isBinary ? LargeBinaryFileWarnBytes : LargeTextFileWarnBytes;
+            if (size > warnAt)
+            {
+                double mb = size / (1024.0 * 1024.0);
+                var res = MessageBox.Show(
+                    $"\"{Path.GetFileName(path)}\" is {mb:N1} MB.\n\nLoading the entire file may use a lot of memory and could be slow. Continue?",
+                    "Large File", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (res != DialogResult.Yes) return;
+            }
+
+            if (isBinary)
             {
                 LoadBinaryFileIntoTab(page, path);
                 return;
@@ -2284,19 +2316,53 @@ namespace nplus
 
                 using (var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(8)))
                 {
-                    var resp = await _updateHttp.SendAsync(req, cts.Token).ConfigureAwait(true);
+                    var resp = await _updateHttp.SendAsync(req, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(true);
                     if (!resp.IsSuccessStatusCode)
                     {
                         errorMessage = $"GitHub returned HTTP {(int)resp.StatusCode} {resp.ReasonPhrase}.";
                     }
+                    else if (resp.Content.Headers.ContentLength is long len && len > UpdateResponseMaxBytes)
+                    {
+                        errorMessage = $"GitHub response was unexpectedly large ({len} bytes).";
+                    }
                     else
                     {
-                        string json = await resp.Content.ReadAsStringAsync().ConfigureAwait(true);
-                        using (var doc = System.Text.Json.JsonDocument.Parse(json))
+                        // Read the body with a hard byte cap so a hostile or runaway
+                        // response can't exhaust memory before JsonDocument.Parse.
+                        string json;
+                        using (var stream = await resp.Content.ReadAsStreamAsync().ConfigureAwait(true))
                         {
-                            var root = doc.RootElement;
-                            if (root.TryGetProperty("tag_name", out var t)) tagName = t.GetString();
-                            if (root.TryGetProperty("html_url", out var u)) releaseUrl = u.GetString();
+                            var buffer = new byte[UpdateResponseMaxBytes + 1];
+                            int total = 0;
+                            int read;
+                            while (total < buffer.Length &&
+                                   (read = await stream.ReadAsync(buffer, total, buffer.Length - total, cts.Token).ConfigureAwait(true)) > 0)
+                            {
+                                total += read;
+                            }
+                            if (total > UpdateResponseMaxBytes)
+                            {
+                                errorMessage = "GitHub response exceeded the maximum size.";
+                                json = null;
+                            }
+                            else
+                            {
+                                json = Encoding.UTF8.GetString(buffer, 0, total);
+                            }
+                        }
+                        if (json != null)
+                        {
+                            using (var doc = System.Text.Json.JsonDocument.Parse(json))
+                            {
+                                var root = doc.RootElement;
+                                if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+                                {
+                                    if (root.TryGetProperty("tag_name", out var t) && t.ValueKind == System.Text.Json.JsonValueKind.String)
+                                        tagName = t.GetString();
+                                    if (root.TryGetProperty("html_url", out var u) && u.ValueKind == System.Text.Json.JsonValueKind.String)
+                                        releaseUrl = u.GetString();
+                                }
+                            }
                         }
                     }
                 }
@@ -2337,9 +2403,9 @@ namespace nplus
             {
                 string msg = $"A newer version of n+ is available.\n\nCurrent: {current}\nLatest:  {tagName}\n\nOpen the GitHub release page?";
                 var res = MessageBox.Show(msg, "Update Available", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-                if (res == DialogResult.Yes && !string.IsNullOrEmpty(releaseUrl))
+                if (res == DialogResult.Yes && IsSafeBrowserUrl(releaseUrl))
                 {
-                    try { System.Diagnostics.Process.Start(releaseUrl); } catch { }
+                    OpenInBrowser(releaseUrl);
                 }
             }
             else if (manual)
@@ -2370,6 +2436,32 @@ namespace nplus
                 return addresses != null && addresses.Length > 0;
             }
             catch { return false; }
+        }
+
+        // Only allow well-formed http/https URLs through Process.Start. Without
+        // this guard, a hostile GitHub response (or MITM) could substitute a
+        // local-exe path or UNC share for html_url and we'd launch it.
+        private static bool IsSafeBrowserUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return false;
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return false;
+            return uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps;
+        }
+
+        // Defer URL opening to the OS default browser via ShellExecute. Explicitly
+        // setting UseShellExecute keeps the intent clear and avoids any ambiguity
+        // about Process.Start treating the string as a file path.
+        private static void OpenInBrowser(string url)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch { /* user can copy the URL out of the dialog if launch fails */ }
         }
 
         private static Version ParseVersionTag(string tag)
