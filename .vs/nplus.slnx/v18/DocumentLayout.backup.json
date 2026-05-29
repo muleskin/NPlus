@@ -62,7 +62,8 @@
               "RelativeToolTip": "EditorForm.cs",
               "ViewState": "AgIAAAgBAAAAAAAAAAAqwDIBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-27T02:04:15.967Z"
+              "WhenOpened": "2026-04-27T02:04:15.967Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",

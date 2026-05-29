@@ -228,8 +228,10 @@ namespace nplus
         // Toolbar View States & Buttons
         private bool _showCharacters = false;
         private bool _showIndentGuides = false;
+        private bool _foldingEnabled = true;
         private bool _restoreMaximized = false;
         private bool _checkForUpdatesOnStartup = true;
+        private ToolStripMenuItem _foldViewMenuItem;
 
         // GitHub repository used by the update checker.
         private const string UpdateGitHubOwner = "muleskin";
@@ -336,7 +338,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 1.3r";
+            this.Text = "n+ - V 1.4e";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -525,6 +527,17 @@ namespace nplus
             zoomOutItem.ShortcutKeys = Keys.F12;
             var zoomResetItem = (ToolStripMenuItem)viewMenu.DropDownItems.Add("Reset Zoom (100%)", null, (s, e) => ZoomReset());
             zoomResetItem.ShortcutKeys = Keys.Control | Keys.D0;
+
+            viewMenu.DropDownItems.Add("-");
+            _foldViewMenuItem = new ToolStripMenuItem("Fold View")
+            {
+                CheckOnClick = true,
+                Checked = _foldingEnabled
+            };
+            _foldViewMenuItem.CheckedChanged += (s, e) => ToggleFolding(_foldViewMenuItem.Checked);
+            viewMenu.DropDownItems.Add(_foldViewMenuItem);
+            viewMenu.DropDownItems.Add("Collapse All", null, (s, e) => GetActiveEditor()?.FoldAll(FoldAction.Contract));
+            viewMenu.DropDownItems.Add("Expand All", null, (s, e) => GetActiveEditor()?.FoldAll(FoldAction.Expand));
 
             mainMenu.Items.Add(_fileMenu);
             mainMenu.Items.Add(editMenu);
@@ -1381,6 +1394,11 @@ namespace nplus
                     bool checkUpdates;
                     if (bool.TryParse(lines[10], out checkUpdates)) _checkForUpdatesOnStartup = checkUpdates;
                 }
+                if (lines.Length >= 12)
+                {
+                    bool folding;
+                    if (bool.TryParse(lines[11], out folding)) _foldingEnabled = folding;
+                }
             }
             catch { /* Ignore corrupt settings file */ }
         }
@@ -1782,7 +1800,8 @@ namespace nplus
                     bounds.Height.ToString(),
                     (this.WindowState == FormWindowState.Maximized).ToString(),
                     _zoomLevel.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    _checkForUpdatesOnStartup.ToString()
+                    _checkForUpdatesOnStartup.ToString(),
+                    _foldingEnabled.ToString()
                 });
             }
             catch { /* Ignore write errors */ }
@@ -2506,7 +2525,7 @@ namespace nplus
             var editor = GetActiveEditor();
 
             editor.Text = @"========================================================================
-                 n+ - beta
+                 n+ - V 1.4e
                  USER'S GUIDE
 ========================================================================
 
@@ -2604,10 +2623,14 @@ namespace nplus
      button in the panel header. The splitter is draggable to resize.
 
 13. LIVE FILE MONITORING (TAIL)
-   - Click the 'Live' icon on the toolbar to auto-reload the current 
+   - Click the 'Live' icon on the toolbar to auto-reload the current
      file whenever it is modified by an external program.
-   - The tab will turn green, and new content will always auto-scroll 
+   - The tab will turn green, and new content will always auto-scroll
      to the bottom so you can tail rolling log files hands-free.
+   - Only the newly-appended bytes are read on each change (incremental
+     tailing), so very large and fast-growing logs stay responsive.
+   - If the log is truncated or rotated, the view reloads from scratch.
+   - Works with any detected encoding, including BOM-less UTF-16 logs.
    - Toggle the icon off to stop monitoring and resume normal editing.
 
 14. NEW DOCUMENT TOOLBAR BUTTON
@@ -2672,6 +2695,57 @@ namespace nplus
      Encoding menu, syntax highlighting, macros, JSON tools, line/blank
      operations, status bar position display) are inactive when the
      active tab is a hex editor.
+
+20. CODE FOLDING (View Menu)
+   - 'View -> Fold View' toggles the fold margin on or off. A +/- box
+     appears next to each foldable block (functions, braces, tags, etc.).
+   - Click a box, or the margin, to collapse or expand that block.
+   - 'View -> Collapse All' folds every block; 'View -> Expand All'
+     unfolds them again.
+   - Folding works for languages whose syntax defines blocks (C#, C/C++,
+     Java, JavaScript/TypeScript, JSON, HTML/XML, PHP, SQL, and more).
+   - Turning Fold View off expands everything so no lines stay hidden.
+   - The Fold View setting is remembered between sessions.
+
+21. EXTERNAL FILE CHANGE DETECTION
+   - If a file you have open is modified by another program, a small
+     pop-up appears for that tab with three choices:
+       * Reload       - load the latest version from disk.
+       * Live Monitor  - switch the tab into live tail mode (section 13).
+       * Ignore        - keep your current view; you will be prompted
+                         again on the next external change.
+   - The pop-up is non-blocking: other tabs stay fully usable while it
+     is open, and each tab can show its own prompt independently.
+   - If a file is deleted or renamed externally, n+ asks how to proceed.
+
+22. TAB APPEARANCE
+   - The active tab is shown in full theme colors.
+   - Inactive tabs (not selected and not live-monitored) are greyed out
+     to match the current Dark/Light theme.
+   - A live-monitored tab is shown in green; a read-only tab in red.
+   - A small dot on each tab shows save state: amber = unsaved changes,
+     green = saved.
+
+23. WINDOWS INTEGRATION (Tools Menu)
+   - 'Tools -> Windows Integration -> Register Open with n+' adds an
+     'Open with n+' entry to the right-click menu for all files (for the
+     current Windows user only; no administrator rights required).
+   - 'Unregister' removes that entry again.
+   - n+ runs as a single instance: opening a file while n+ is already
+     running (via Open With, double-click, or the command line) adds the
+     file as a new tab in the existing window and brings it to the front,
+     rather than starting a second copy. If the file is already open, its
+     existing tab is selected.
+
+24. CHECK FOR UPDATES (Help Menu)
+   - 'Help -> Check for Updates' compares your version against the latest
+     release published on the project's GitHub page.
+   - If a newer version exists, n+ offers to open the release page in
+     your browser.
+   - 'Help -> Check on Startup' enables or disables an automatic, silent
+     check each time n+ launches (it only notifies you if an update is
+     found). This setting is remembered between sessions.
+   - The check is skipped when no internet connection is detected.
 
 ========================================================================";
 
@@ -2766,6 +2840,24 @@ namespace nplus
                     editor.WrapMode = enable ? WrapMode.Word : WrapMode.None;
                 }
             }
+        }
+
+        private void ToggleFolding(bool enable)
+        {
+            _foldingEnabled = enable;
+
+            foreach (TabPage page in tcDocuments.TabPages)
+            {
+                if (page.Controls[0] is Scintilla editor)
+                {
+                    editor.Margins[2].Width = enable ? 16 : 0;
+                    // When hiding the fold margin, expand everything so no lines
+                    // stay collapsed and unreachable.
+                    if (!enable) editor.FoldAll(FoldAction.Expand);
+                }
+            }
+
+            SaveSettings();
         }
 
         private void ToggleColumnMode(bool enable)
@@ -4783,6 +4875,46 @@ namespace nplus
                 case ".csv": editor.Lexer = Lexer.Null; break;
                 default: editor.Lexer = Lexer.Null; break;
             }
+
+            ConfigureFolding(editor);
+        }
+
+        // Sets up the fold margin, fold-point markers, and theme-aware colors.
+        // Called from ApplySyntaxHighlighting so it re-applies on lexer/theme change.
+        private void ConfigureFolding(Scintilla editor)
+        {
+            // Tell the lexer to emit fold points.
+            editor.SetProperty("fold", "1");
+            editor.SetProperty("fold.compact", "1");
+            editor.SetProperty("fold.comment", "1");
+            editor.SetProperty("fold.preprocessor", "1");
+            editor.SetProperty("fold.html", "1");
+
+            // Margin 2 is the fold margin (0 = line numbers, 1 = bookmarks).
+            editor.Margins[2].Type = MarginType.Symbol;
+            editor.Margins[2].Mask = Marker.MaskFolders;
+            editor.Margins[2].Sensitive = true;
+            editor.Margins[2].Width = _foldingEnabled ? 16 : 0;
+
+            editor.Markers[Marker.Folder].Symbol = MarkerSymbol.BoxPlus;
+            editor.Markers[Marker.FolderOpen].Symbol = MarkerSymbol.BoxMinus;
+            editor.Markers[Marker.FolderEnd].Symbol = MarkerSymbol.BoxPlusConnected;
+            editor.Markers[Marker.FolderMidTail].Symbol = MarkerSymbol.TCorner;
+            editor.Markers[Marker.FolderOpenMid].Symbol = MarkerSymbol.BoxMinusConnected;
+            editor.Markers[Marker.FolderSub].Symbol = MarkerSymbol.VLine;
+            editor.Markers[Marker.FolderTail].Symbol = MarkerSymbol.LCorner;
+
+            // Symbol (+/-) color and box-fill color, themed.
+            Color foreColor = _isDarkMode ? Color.FromArgb(30, 30, 35) : Color.White;
+            Color backColor = _isDarkMode ? Color.FromArgb(150, 150, 150) : Color.Gray;
+            for (int i = Marker.FolderEnd; i <= Marker.FolderOpen; i++)
+            {
+                editor.Markers[i].SetForeColor(foreColor);
+                editor.Markers[i].SetBackColor(backColor);
+            }
+
+            // Let Scintilla manage fold state automatically as text changes / on click.
+            editor.AutomaticFold = AutomaticFold.Show | AutomaticFold.Click | AutomaticFold.Change;
         }
         #endregion
 
