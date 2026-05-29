@@ -182,6 +182,17 @@ namespace nplus
         private Dictionary<TabPage, FileSystemWatcher> _fileWatchers = new Dictionary<TabPage, FileSystemWatcher>();
         private Dictionary<TabPage, long> _liveMonitorOffsets = new Dictionary<TabPage, long>();
         private Dictionary<TabPage, FileChangedPrompt> _fileChangePrompts = new Dictionary<TabPage, FileChangedPrompt>();
+
+        // Per-tab color tags (Notepad++-style). Value is a 1-based index into _tabColors.
+        private Dictionary<TabPage, int> _tabColorIndex = new Dictionary<TabPage, int>();
+        private static readonly Color[] _tabColors =
+        {
+            Color.FromArgb(240, 219, 79),    // 1 - Yellow
+            Color.FromArgb(120, 198, 110),   // 2 - Green
+            Color.FromArgb(95,  160, 228),   // 3 - Blue
+            Color.FromArgb(181, 126, 220),   // 4 - Purple
+            Color.FromArgb(240, 150, 90),    // 5 - Orange
+        };
         // General file change detection (prompts user on external changes/deletions)
         private Dictionary<TabPage, FileSystemWatcher> _fileChangeWatchers = new Dictionary<TabPage, FileSystemWatcher>();
         private bool _isSwitchingTabs = false;
@@ -338,7 +349,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 1.4e";
+            this.Text = "n+ - V 1.4h";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -1859,7 +1870,8 @@ namespace nplus
                     tabTitle = tabTitle.TrimEnd('*');
                 }
 
-                sessionLines.Add($"{originalPath}|{backupPath}|{tabTitle}");
+                int colorIndex = _tabColorIndex.TryGetValue(page, out int ci) ? ci : 0;
+                sessionLines.Add($"{originalPath}|{backupPath}|{tabTitle}|{colorIndex}");
                 counter++;
             }
 
@@ -1878,11 +1890,13 @@ namespace nplus
                 foreach (string line in lines)
                 {
                     var parts = line.Split('|');
-                    if (parts.Length != 3) continue;
+                    if (parts.Length < 3) continue;
 
                     string originalPath = parts[0];
                     string backupPath = parts[1];
                     string tabTitle = parts[2];
+                    int colorIndex = 0;
+                    if (parts.Length >= 4) int.TryParse(parts[3], out colorIndex);
 
                     string displayTitle = tabTitle.TrimEnd('*');
                     if (string.IsNullOrEmpty(originalPath) && string.IsNullOrEmpty(displayTitle)) displayTitle = "new 1";
@@ -1900,6 +1914,9 @@ namespace nplus
                     {
                         LoadFileIntoEditor(editor, page, originalPath);
                     }
+
+                    if (colorIndex >= 1 && colorIndex <= _tabColors.Length && page != null)
+                        _tabColorIndex[page] = colorIndex;
 
                     loadedAny = true;
                 }
@@ -2525,7 +2542,7 @@ namespace nplus
             var editor = GetActiveEditor();
 
             editor.Text = @"========================================================================
-                 n+ - V 1.4e
+                 n+ - V 1.4h
                  USER'S GUIDE
 ========================================================================
 
@@ -2746,6 +2763,23 @@ namespace nplus
      check each time n+ launches (it only notifies you if an update is
      found). This setting is remembered between sessions.
    - The check is skipped when no internet connection is detected.
+
+25. TAB COLOR TAGS (Right-Click a Tab)
+   - Right-click any file tab to open its context menu.
+   - Choose 'Apply Color 1' through 'Apply Color 5' to tag the tab with
+     one of five colors (Yellow, Green, Blue, Purple, Orange). Each menu
+     entry shows a swatch of its color, and the color currently in use is
+     check-marked.
+   - Choose 'Remove Color' to clear the tag and return the tab to its
+     normal appearance.
+   - Color tags are handy for visually grouping related files (e.g. all
+     config files Yellow, all logs Blue).
+   - The tab text automatically switches between black and white so it
+     stays readable on whichever color you pick.
+   - A color tag overrides the normal active/inactive and read-only tab
+     look, but a live-monitored tab still shows green (see section 22).
+     When a colored tab is not the active tab, its color is shown dimmed.
+   - Color tags are remembered between sessions along with your open tabs.
 
 ========================================================================";
 
@@ -4141,24 +4175,39 @@ namespace nplus
             // Tabs that aren't the active one and aren't tailing a log get a muted look.
             bool isInactive = !isSelected && !isMonitored;
 
+            bool hasColor = _tabColorIndex.TryGetValue(page, out int colorIdx)
+                            && colorIdx >= 1 && colorIdx <= _tabColors.Length;
+
             Brush fillBrush;
             bool isCustomBrush = true;
+            Color textColor;
 
-            // 2. Apply Custom Background Colors
+            // 2. Apply Custom Background Colors. Live-monitoring (green) stays the
+            // top-priority signal; a user-applied color tag wins over the resting
+            // active/inactive/read-only appearance.
             if (isMonitored)
             {
-                // Green background for Live Monitoring
                 fillBrush = new SolidBrush(_isDarkMode ? Color.FromArgb(40, 80, 40) : Color.LightGreen);
+                textColor = _isDarkMode ? Color.White : Color.Black;
+            }
+            else if (hasColor)
+            {
+                Color tabColor = _tabColors[colorIdx - 1];
+                // Dim the tag a little when the tab isn't the active one.
+                if (isInactive) tabColor = BlendColor(tabColor, _isDarkMode ? Color.FromArgb(34, 34, 36) : Color.FromArgb(222, 222, 222), 0.45);
+                fillBrush = new SolidBrush(tabColor);
+                textColor = ContrastingTextColor(tabColor);
             }
             else if (isReadOnly)
             {
-                // Reddish background for Read-Only
                 fillBrush = new SolidBrush(_isDarkMode ? Color.FromArgb(80, 40, 40) : Color.MistyRose);
+                textColor = _isDarkMode ? Color.White : Color.Black;
             }
             else if (isInactive)
             {
                 // Greyed-out background for inactive tabs (matches the active theme).
                 fillBrush = new SolidBrush(_isDarkMode ? Color.FromArgb(34, 34, 36) : Color.FromArgb(222, 222, 222));
+                textColor = _isDarkMode ? Color.FromArgb(135, 135, 135) : Color.FromArgb(120, 120, 120);
             }
             else
             {
@@ -4172,13 +4221,8 @@ namespace nplus
                     fillBrush = SystemBrushes.Control;
                     isCustomBrush = false;
                 }
-            }
-
-            Color textColor;
-            if (isInactive)
-                textColor = _isDarkMode ? Color.FromArgb(135, 135, 135) : Color.FromArgb(120, 120, 120);
-            else
                 textColor = _isDarkMode ? Color.White : Color.Black;
+            }
 
             // Draw the tab background
             e.Graphics.FillRectangle(fillBrush, rect);
@@ -4216,6 +4260,20 @@ namespace nplus
 
         private void TcDocuments_MouseDown(object sender, MouseEventArgs e)
         {
+            // Right-click a tab to show the color-tag context menu.
+            if (e.Button == MouseButtons.Right)
+            {
+                for (int i = 0; i < tcDocuments.TabPages.Count; i++)
+                {
+                    if (tcDocuments.GetTabRect(i).Contains(e.Location))
+                    {
+                        ShowTabContextMenu(tcDocuments.TabPages[i], e.Location);
+                        return;
+                    }
+                }
+                return;
+            }
+
             for (int i = 0; i < tcDocuments.TabPages.Count; i++)
             {
                 var rect = tcDocuments.GetTabRect(i);
@@ -4242,6 +4300,65 @@ namespace nplus
                     }
                 }
             }
+        }
+
+        private void ShowTabContextMenu(TabPage page, Point location)
+        {
+            var menu = new ContextMenuStrip();
+
+            for (int i = 0; i < _tabColors.Length; i++)
+            {
+                int colorIndex = i + 1;                 // 1-based
+                Color swatch = _tabColors[i];
+
+                // 16x16 swatch image for the menu item.
+                var bmp = new Bitmap(16, 16);
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    using (var b = new SolidBrush(swatch)) g.FillRectangle(b, 1, 1, 14, 14);
+                    g.DrawRectangle(Pens.Gray, 0, 0, 15, 15);
+                }
+
+                var item = new ToolStripMenuItem($"Apply Color {colorIndex}", bmp, (s, e) => SetTabColor(page, colorIndex));
+                _tabColorIndex.TryGetValue(page, out int current);
+                item.Checked = (current == colorIndex);
+                menu.Items.Add(item);
+            }
+
+            menu.Items.Add(new ToolStripSeparator());
+            var remove = new ToolStripMenuItem("Remove Color", null, (s, e) => SetTabColor(page, 0));
+            remove.Enabled = _tabColorIndex.ContainsKey(page);
+            menu.Items.Add(remove);
+
+            menu.Show(tcDocuments, location);
+        }
+
+        private void SetTabColor(TabPage page, int colorIndex)
+        {
+            if (page == null) return;
+            if (colorIndex <= 0 || colorIndex > _tabColors.Length)
+                _tabColorIndex.Remove(page);
+            else
+                _tabColorIndex[page] = colorIndex;
+
+            tcDocuments.Invalidate();
+        }
+
+        // Linear blend of two colors. amount=0 returns 'a', amount=1 returns 'b'.
+        private static Color BlendColor(Color a, Color b, double amount)
+        {
+            amount = Math.Max(0, Math.Min(1, amount));
+            int r = (int)(a.R + (b.R - a.R) * amount);
+            int g = (int)(a.G + (b.G - a.G) * amount);
+            int bl = (int)(a.B + (b.B - a.B) * amount);
+            return Color.FromArgb(r, g, bl);
+        }
+
+        // Picks black or white text for legibility against a colored background.
+        private static Color ContrastingTextColor(Color bg)
+        {
+            double luminance = (0.299 * bg.R + 0.587 * bg.G + 0.114 * bg.B);
+            return luminance > 140 ? Color.Black : Color.White;
         }
 
         private void TcDocuments_MouseMove(object sender, MouseEventArgs e)
@@ -4428,6 +4545,8 @@ namespace nplus
                 _fileChangePrompts.Remove(page);
                 try { prompt.Close(); } catch { }
             }
+
+            _tabColorIndex.Remove(page);
 
             // Clean up file change detection watcher
             StopFileChangeWatch(page);
