@@ -1,21 +1,21 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\",
+  "WorkspaceRootPath": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|c:\\users\\jedd\\desktop\\developing\\nplus\\findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|c:\\users\\jedd\\desktop\\developing\\private\\nplus\\findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\editorstyler..cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\editorstyler..cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:editorstyler..cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
@@ -56,9 +56,9 @@
               "$type": "Document",
               "DocumentIndex": 1,
               "Title": "EditorForm.cs",
-              "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\EditorForm.cs",
+              "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\EditorForm.cs",
               "RelativeDocumentMoniker": "EditorForm.cs",
-              "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\EditorForm.cs",
+              "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\EditorForm.cs",
               "RelativeToolTip": "EditorForm.cs",
               "ViewState": "AgIAAAgBAAAAAAAAAAAqwDIBAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -68,9 +68,9 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "FindReplaceDialog.cs",
-              "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\FindReplaceDialog.cs",
+              "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\FindReplaceDialog.cs",
               "RelativeDocumentMoniker": "FindReplaceDialog.cs",
-              "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\FindReplaceDialog.cs",
+              "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\FindReplaceDialog.cs",
               "RelativeToolTip": "FindReplaceDialog.cs",
               "ViewState": "AgIAADcAAAAAAAAAAAAqwDYBAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -81,9 +81,9 @@
               "$type": "Document",
               "DocumentIndex": 3,
               "Title": "EditorStyler..cs",
-              "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\EditorStyler..cs",
+              "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\EditorStyler..cs",
               "RelativeDocumentMoniker": "EditorStyler..cs",
-              "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\EditorStyler..cs",
+              "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\EditorStyler..cs",
               "RelativeToolTip": "EditorStyler..cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAyAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
@@ -93,9 +93,9 @@
               "$type": "Document",
               "DocumentIndex": 2,
               "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\Program.cs",
+              "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
-              "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\nplus\\Program.cs",
+              "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\Program.cs",
               "RelativeToolTip": "Program.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",

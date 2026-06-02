@@ -190,7 +190,7 @@ namespace nplus
             Color.FromArgb(240, 219, 79),    // 1 - Yellow
             Color.FromArgb(120, 198, 110),   // 2 - Green
             Color.FromArgb(95,  160, 228),   // 3 - Blue
-            Color.FromArgb(181, 126, 220),   // 4 - Purple
+            Color.FromArgb(224, 90,  90),    // 4 - Red
             Color.FromArgb(240, 150, 90),    // 5 - Orange
         };
         // General file change detection (prompts user on external changes/deletions)
@@ -349,7 +349,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 1.4h";
+            this.Text = "n+ - V 1.4i";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -2542,7 +2542,7 @@ namespace nplus
             var editor = GetActiveEditor();
 
             editor.Text = @"========================================================================
-                 n+ - V 1.4h
+                 n+ - V 1.4i
                  USER'S GUIDE
 ========================================================================
 
@@ -2767,7 +2767,7 @@ namespace nplus
 25. TAB COLOR TAGS (Right-Click a Tab)
    - Right-click any file tab to open its context menu.
    - Choose 'Apply Color 1' through 'Apply Color 5' to tag the tab with
-     one of five colors (Yellow, Green, Blue, Purple, Orange). Each menu
+     one of five colors (Yellow, Green, Blue, Red, Orange). Each menu
      entry shows a swatch of its color, and the color currently in use is
      check-marked.
    - Choose 'Remove Color' to clear the tag and return the tab to its
