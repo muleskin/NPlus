@@ -970,7 +970,7 @@ namespace nplus
                 _liveMonitorOffsets.Remove(page);
             }
 
-            tcDocuments.Invalidate(); // Refresh the UI to immediately apply the green tab color
+            tcDocuments.Invalidate(); // Refresh the UI to immediately apply the gold tab color
         }
 
         private void Fsw_Changed(object sender, FileSystemEventArgs e)
@@ -2739,7 +2739,7 @@ namespace nplus
    - The active tab is shown in full theme colors.
    - Inactive tabs (not selected and not live-monitored) are greyed out
      to match the current Dark/Light theme.
-   - A live-monitored tab is shown in green; a read-only tab in red.
+   - A live-monitored tab is shown in gold; a read-only tab in red.
    - A small dot on each tab shows save state: amber = unsaved changes,
      green = saved.
 
@@ -2777,7 +2777,7 @@ namespace nplus
    - The tab text automatically switches between black and white so it
      stays readable on whichever color you pick.
    - A color tag overrides the normal active/inactive and read-only tab
-     look, but a live-monitored tab still shows green (see section 22).
+     look, but a live-monitored tab still shows gold (see section 22).
      When a colored tab is not the active tab, its color is shown dimmed.
    - Color tags are remembered between sessions along with your open tabs.
 
@@ -4182,12 +4182,12 @@ namespace nplus
             bool isCustomBrush = true;
             Color textColor;
 
-            // 2. Apply Custom Background Colors. Live-monitoring (green) stays the
+            // 2. Apply Custom Background Colors. Live-monitoring (gold) stays the
             // top-priority signal; a user-applied color tag wins over the resting
             // active/inactive/read-only appearance.
             if (isMonitored)
             {
-                fillBrush = new SolidBrush(_isDarkMode ? Color.FromArgb(40, 80, 40) : Color.LightGreen);
+                fillBrush = new SolidBrush(_isDarkMode ? Color.FromArgb(110, 90, 20) : Color.Gold);
                 textColor = _isDarkMode ? Color.White : Color.Black;
             }
             else if (hasColor)
