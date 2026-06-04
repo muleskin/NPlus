@@ -98,7 +98,7 @@ To produce the distributable single-file build, run the build script from the re
 This writes a single `dist\nplus.exe`. The build has two parts wired together by the script:
 
 1. **The app** (`nplus.csproj`) publishes as a framework-dependent single file. All managed assemblies are bundled by .NET's single-file publish; Scintilla's native `Scintilla.dll` / `Lexilla.dll` are carried as embedded resources and extracted to `%LOCALAPPDATA%\nplus\native` at startup (Scintilla.NET loads them from disk, so they can't live inside the bundle directly).
-2. **The launcher** (`Bootstrap\nplus.bootstrap.csproj`) is a Native AOT exe — it runs without any installed runtime. It embeds the published app, checks for the .NET 8 Desktop Runtime, downloads + installs it (with the user's consent) if missing, then extracts and launches the app.
+2. **The launcher** (`Bootstrap\nplus.bootstrap.csproj`) is a Native AOT exe — it runs without any installed runtime. It embeds the published app **GZip-compressed** (shaving ~1.8 MB off the final exe), checks for the .NET 8 Desktop Runtime, downloads + installs it (with the user's consent) if missing, then decompresses + extracts and launches the app.
 
 The result is **framework-dependent** (the app needs the .NET 8 Desktop Runtime), but the launcher bootstraps that runtime automatically, so the end user only ever needs the one `nplus.exe`.
 

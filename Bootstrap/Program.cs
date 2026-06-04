@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -15,7 +16,7 @@ namespace nplus.Bootstrap
     /// </summary>
     internal static class Program
     {
-        private const string PayloadResource = "nplus.payload.app.exe";
+        private const string PayloadResource = "nplus.payload.app.gz";
 
         [STAThread]
         private static int Main(string[] args)
@@ -77,6 +78,8 @@ namespace nplus.Bootstrap
         {
             Assembly asm = Assembly.GetExecutingAssembly();
 
+            // The payload is embedded GZip-compressed; decompress it back to the
+            // original app exe bytes.
             byte[] payload;
             using (Stream s = asm.GetManifestResourceStream(PayloadResource))
             {
@@ -85,8 +88,9 @@ namespace nplus.Bootstrap
                     throw new InvalidOperationException("Embedded application payload is missing.");
                 }
 
+                using var gz = new GZipStream(s, CompressionMode.Decompress);
                 using var ms = new MemoryStream();
-                s.CopyTo(ms);
+                gz.CopyTo(ms);
                 payload = ms.ToArray();
             }
 

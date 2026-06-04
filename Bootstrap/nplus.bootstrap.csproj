@@ -34,16 +34,41 @@
     <NoWarn>$(NoWarn);CA1416</NoWarn>
   </PropertyGroup>
 
-  <!-- Embed the published real app. build.ps1 stages it here before this builds. -->
+  <!-- Embed the published real app, GZip-compressed (see CompressPayload below).
+       The launcher decompresses it at startup. This shrinks the final exe by ~1.8 MB
+       vs. embedding the raw app. -->
   <ItemGroup>
-    <EmbeddedResource Include="payload\nplus.app.bin" LogicalName="nplus.payload.app.exe" />
+    <EmbeddedResource Include="payload\nplus.app.gz" LogicalName="nplus.payload.app.gz" />
   </ItemGroup>
 
-  <!-- Fail with a clear message if the payload wasn't staged (i.e. someone built
-       this project directly instead of running build.ps1). -->
-  <Target Name="CheckPayloadPresent" BeforeTargets="BeforeCompile">
+  <!-- Inline task: GZip-compress a file. (GZipStream is in the netstandard reference
+       set the inline-task compiler targets; BrotliStream is not, hence GZip.) -->
+  <UsingTask TaskName="GZipCompress" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Source ParameterType="System.String" Required="true" />
+      <Dest ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        using (var inp = System.IO.File.OpenRead(Source))
+        using (var outp = System.IO.File.Create(Dest))
+        using (var gz = new System.IO.Compression.GZipStream(outp, System.IO.Compression.CompressionLevel.Optimal))
+        {
+            inp.CopyTo(gz);
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <!-- Before compiling, make sure the staged app exists and compress it. build.ps1
+       publishes the app and drops it at payload\nplus.app.bin; we compress that to
+       payload\nplus.app.gz, which is the embedded resource above. -->
+  <Target Name="CompressPayload" BeforeTargets="BeforeCompile">
     <Error Condition="!Exists('$(MSBuildProjectDirectory)\payload\nplus.app.bin')"
            Text="payload\nplus.app.bin is missing. Build the whole thing with build.ps1 (it publishes the app and stages the payload before building this launcher)." />
+    <GZipCompress Source="$(MSBuildProjectDirectory)\payload\nplus.app.bin"
+                  Dest="$(MSBuildProjectDirectory)\payload\nplus.app.gz" />
   </Target>
 
 </Project>
