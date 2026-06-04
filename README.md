@@ -1,12 +1,12 @@
 # n+ (NPlus)
 
-A lightweight, single-executable text and code editor for Windows, built in C# / WinForms on top of [ScintillaNET](https://github.com/jacobslusser/ScintillaNET). Inspired by Notepad++, with a focus on session persistence, a built-in macro engine, and live file tailing.
+A lightweight text and code editor for Windows, built in C# / WinForms on top of [Scintilla 5](https://www.scintilla.org/) via the [Scintilla5.NET](https://github.com/desjarlais/Scintilla.NET) wrapper. Inspired by Notepad++, with a focus on session persistence, a built-in macro engine, and live file tailing.
 
-The entire application ships as a single `nplus.exe` (dependencies merged via Costura.Fody) — no installer, no runtime to deploy beyond .NET Framework 4.7.2.
+The application targets **.NET 8** and ships as a single, self-contained `nplus.exe` — everything is inside that one file: all managed assemblies, Scintilla's native `Scintilla.dll` / `Lexilla.dll`, and a small native launcher. If the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) isn't installed, the launcher offers to download and install it (with your approval) on first run. No installer, no loose DLLs.
 
 ## Download
 
-Grab the latest `nplus.exe` from the [GitHub Releases page](https://github.com/muleskin/NPlus/releases/latest). Just download and run — no installation required.
+Grab the latest `nplus.exe` from the [GitHub Releases page](https://github.com/muleskin/NPlus/releases/latest). Just download and run — no installation required. If your PC doesn't have the .NET 8 Desktop Runtime yet, nplus will prompt to install it the first time you launch it.
 
 ## Features
 
@@ -80,20 +80,42 @@ Grab the latest `nplus.exe` from the [GitHub Releases page](https://github.com/m
 
 Requirements:
 - Windows
-- Visual Studio 2019+ (or MSBuild 15+)
-- .NET Framework 4.7.2 developer pack
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- Visual Studio C++ build tools ("Desktop development with C++") — required to compile the Native AOT launcher.
+
+For day-to-day development of the editor itself (no launcher), just build/run the app project:
 
 ```
-nuget restore nplus.slnx
-msbuild nplus.csproj /p:Configuration=Release
+dotnet build -c Release
 ```
 
-The build produces a self-contained `nplus.exe` in `bin\Release\` — Costura.Fody embeds all referenced assemblies into the executable.
+To produce the distributable single-file build, run the build script from the repo root:
+
+```
+.\build.ps1
+```
+
+This writes a single `dist\nplus.exe`. The build has two parts wired together by the script:
+
+1. **The app** (`nplus.csproj`) publishes as a framework-dependent single file. All managed assemblies are bundled by .NET's single-file publish; Scintilla's native `Scintilla.dll` / `Lexilla.dll` are carried as embedded resources and extracted to `%LOCALAPPDATA%\nplus\native` at startup (Scintilla.NET loads them from disk, so they can't live inside the bundle directly).
+2. **The launcher** (`Bootstrap\nplus.bootstrap.csproj`) is a Native AOT exe — it runs without any installed runtime. It embeds the published app, checks for the .NET 8 Desktop Runtime, downloads + installs it (with the user's consent) if missing, then extracts and launches the app.
+
+The result is **framework-dependent** (the app needs the .NET 8 Desktop Runtime), but the launcher bootstraps that runtime automatically, so the end user only ever needs the one `nplus.exe`.
+
+### Project layout
+
+| Path | What it is |
+| --- | --- |
+| `nplus.csproj`, `*.cs` | The WinForms editor application. |
+| `native\win-x64\` | Scintilla / Lexilla native DLLs, embedded into the app exe as resources. |
+| `Bootstrap\nplus.bootstrap.csproj` | The Native AOT launcher (`Program.cs`). |
+| `Bootstrap\RuntimeInstaller.cs` | Runtime detection / download / install logic, kept separate and UI-free. |
+| `build.ps1` | Builds the whole thing into `dist\nplus.exe`. |
 
 ### Dependencies
-- [ScintillaNET](https://www.nuget.org/packages/jacobslusser.ScintillaNET) 3.6.3 — editor control
-- [Costura.Fody](https://www.nuget.org/packages/Costura.Fody) 6.0.0 — embedded-assembly packaging
-- `System.Text.Json` for JSON formatting / tree view
+- [Scintilla5.NET](https://www.nuget.org/packages/Scintilla5.NET) 6.1.2 — editor control (Scintilla 5.5.5 + Lexilla 5.4.3)
+- [Be.Windows.Forms.HexBox.Net5](https://www.nuget.org/packages/Be.Windows.Forms.HexBox.Net5) 1.8.0 — read-only hex view
+- `System.Text.Json` (built into .NET 8) for JSON formatting / tree view
 
 ## License
 

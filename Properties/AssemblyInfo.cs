@@ -29,7 +29,7 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-// Third number maps the suffix letter from the title-bar version (a=1, b=2, ...).
-// e.g. "1.4t" -> 1.4.20
-[assembly: AssemblyVersion("1.4.20.0")]
-[assembly: AssemblyFileVersion("1.4.20.0")]
+// Third number maps the suffix letter from the title-bar version (a=1, b=2, c=3, ...).
+// e.g. "2.1c" -> 2.1.3
+[assembly: AssemblyVersion("2.1.3.0")]
+[assembly: AssemblyFileVersion("2.1.3.0")]

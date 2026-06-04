@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- ================================================================
+       nplus single-file launcher (Native AOT).
+
+       This compiles to a native exe with NO managed-runtime dependency, so it
+       can run on a machine that does not yet have .NET installed. Its job:
+         1. Check whether the .NET 8 Desktop Runtime is present.
+         2. If not, ask the user, then download + install it from Microsoft.
+         3. Extract the embedded real WinForms app and launch it.
+
+       The real app (the parent nplus.csproj, published as a framework-dependent
+       single file) is embedded here as 'payload\nplus.app.bin'. Use build.ps1 in
+       the repo root to publish the app, stage the payload, and build this — it
+       wires the two together in the right order.
+       ================================================================ -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AssemblyName>nplus</AssemblyName>
+    <RootNamespace>nplus.Bootstrap</RootNamespace>
+    <ApplicationIcon>..\nplus.ico</ApplicationIcon>
+
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Native AOT: one self-standing native exe, no runtime required to start. -->
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <StackTraceSupport>false</StackTraceSupport>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <!-- Embed the published real app. build.ps1 stages it here before this builds. -->
+  <ItemGroup>
+    <EmbeddedResource Include="payload\nplus.app.bin" LogicalName="nplus.payload.app.exe" />
+  </ItemGroup>
+
+  <!-- Fail with a clear message if the payload wasn't staged (i.e. someone built
+       this project directly instead of running build.ps1). -->
+  <Target Name="CheckPayloadPresent" BeforeTargets="BeforeCompile">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\payload\nplus.app.bin')"
+           Text="payload\nplus.app.bin is missing. Build the whole thing with build.ps1 (it publishes the app and stages the payload before building this launcher)." />
+  </Target>
+
+</Project>

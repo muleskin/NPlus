@@ -3,20 +3,24 @@
   "WorkspaceRootPath": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|c:\\users\\jedd\\desktop\\developing\\private\\nplus\\nplus.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:nplus.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|c:\\users\\jedd\\desktop\\developing\\private\\nplus\\editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|c:\\users\\jedd\\desktop\\developing\\private\\nplus\\findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:findreplacedialog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:editorform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\editorstyler..cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|c:\\users\\jedd\\desktop\\developing\\private\\nplus\\editorstyler..cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:editorstyler..cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|c:\\users\\jedd\\desktop\\developing\\private\\nplus\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{509EDC96-4469-493B-B074-0C752509FDC0}|nplus.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -26,7 +30,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 7,
+          "SelectedChildIndex": 6,
           "Children": [
             {
               "$type": "Bookmark",
@@ -54,27 +58,41 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "nplus",
+              "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\nplus.csproj",
+              "RelativeDocumentMoniker": "nplus.csproj",
+              "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\nplus.csproj",
+              "RelativeToolTip": "nplus.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-06-04T12:55:55.176Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 1,
               "Title": "EditorForm.cs",
               "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\EditorForm.cs",
               "RelativeDocumentMoniker": "EditorForm.cs",
               "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\EditorForm.cs",
               "RelativeToolTip": "EditorForm.cs",
-              "ViewState": "AgIAAAgBAAAAAAAAAAAqwDIBAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-27T02:04:15.967Z"
+              "WhenOpened": "2026-06-04T12:36:11.035Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "FindReplaceDialog.cs",
               "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\FindReplaceDialog.cs",
               "RelativeDocumentMoniker": "FindReplaceDialog.cs",
               "ToolTip": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\FindReplaceDialog.cs",
               "RelativeToolTip": "FindReplaceDialog.cs",
-              "ViewState": "AgIAADcAAAAAAAAAAAAqwDYBAAAIAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-21T14:03:25.193Z",
+              "WhenOpened": "2026-06-04T12:36:11.044Z",
               "EditorCaption": ""
             },
             {
@@ -87,11 +105,12 @@
               "RelativeToolTip": "EditorStyler..cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAyAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-21T12:51:42.685Z"
+              "WhenOpened": "2026-06-04T12:36:11.05Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\Jedd\\Desktop\\Developing\\Private\\Nplus\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
@@ -99,7 +118,8 @@
               "RelativeToolTip": "Program.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-21T12:50:20.764Z"
+              "WhenOpened": "2026-06-04T12:36:11.055Z",
+              "EditorCaption": ""
             }
           ]
         }

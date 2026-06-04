@@ -8,7 +8,7 @@ namespace nplus
         public static void ApplyHighEnergyTheme(Scintilla editor)
         {
             // Set Lexer to C++ (Scintilla uses this for C# as well)
-            editor.Lexer = Lexer.Cpp;
+            editor.LexerName = "cpp";
 
             // Base Colors
             Color bg = Color.FromArgb(20, 20, 25);
@@ -41,7 +41,7 @@ namespace nplus
 
             // Caret and Selection
             editor.CaretForeColor = Color.White;
-            editor.SetSelectionBackColor(true, Color.FromArgb(60, 60, 70));
+            editor.SelectionBackColor = Color.FromArgb(60, 60, 70);
         }
     }
 }

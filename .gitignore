@@ -1,0 +1,11 @@
+# Build output
+bin/
+obj/
+dist/
+
+# Native AOT launcher: the staged app payload is produced by build.ps1
+Bootstrap/payload/
+
+# Visual Studio
+.vs/
+*.user

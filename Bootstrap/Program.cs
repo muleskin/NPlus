@@ -1,0 +1,146 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+
+namespace nplus.Bootstrap
+{
+    /// <summary>
+    /// Native-AOT launcher for nplus. Runs without any installed .NET runtime,
+    /// ensures the .NET 8 Desktop Runtime is present (downloading + installing it
+    /// with the user's consent if not), then extracts and launches the embedded
+    /// WinForms application.
+    /// </summary>
+    internal static class Program
+    {
+        private const string PayloadResource = "nplus.payload.app.exe";
+
+        [STAThread]
+        private static int Main(string[] args)
+        {
+            try
+            {
+                if (!RuntimeInstaller.IsDesktopRuntime8Present())
+                {
+                    if (!PromptInstall())
+                    {
+                        return 1; // user declined; nothing we can do.
+                    }
+
+                    if (!RuntimeInstaller.DownloadAndInstall() || !RuntimeInstaller.IsDesktopRuntime8Present())
+                    {
+                        ShowError(
+                            "The .NET 8 Desktop Runtime could not be installed automatically.\n\n" +
+                            "You can install it manually from:\n" + RuntimeInstaller.InstallerUrl +
+                            "\n\nThen start nplus again.");
+                        return 2;
+                    }
+                }
+
+                string appExe = ExtractPayload();
+                LaunchApp(appExe, args);
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                ShowError("nplus failed to start.\n\n" + ex.Message);
+                return 3;
+            }
+        }
+
+        // ---- install prompt ----------------------------------------------------
+
+        private static bool PromptInstall()
+        {
+            const uint MB_YESNO = 0x4;
+            const uint MB_ICONQUESTION = 0x20;
+            const int IDYES = 6;
+
+            int result = MessageBoxW(IntPtr.Zero,
+                "nplus needs the Microsoft .NET 8 Desktop Runtime, which isn't installed on this PC.\n\n" +
+                "Download and install it now? (This needs administrator approval and may take a few minutes.)",
+                "nplus — install .NET 8 Runtime",
+                MB_YESNO | MB_ICONQUESTION);
+
+            return result == IDYES;
+        }
+
+        // ---- payload extraction + launch --------------------------------------
+
+        /// <summary>
+        /// Writes the embedded real app to a per-user, content-addressed folder and
+        /// returns the path to its exe. Re-extracts only when the bytes change.
+        /// </summary>
+        private static string ExtractPayload()
+        {
+            Assembly asm = Assembly.GetExecutingAssembly();
+
+            byte[] payload;
+            using (Stream s = asm.GetManifestResourceStream(PayloadResource))
+            {
+                if (s == null)
+                {
+                    throw new InvalidOperationException("Embedded application payload is missing.");
+                }
+
+                using var ms = new MemoryStream();
+                s.CopyTo(ms);
+                payload = ms.ToArray();
+            }
+
+            string tag = Convert.ToHexString(SHA256.HashData(payload)).Substring(0, 16);
+            string dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "nplus", "app", tag);
+            Directory.CreateDirectory(dir);
+
+            string exe = Path.Combine(dir, "nplus.exe");
+            if (!File.Exists(exe) || new FileInfo(exe).Length != payload.Length)
+            {
+                try
+                {
+                    File.WriteAllBytes(exe, payload);
+                }
+                catch (IOException)
+                {
+                    // A concurrent launch may already be writing/running it; tolerate
+                    // as long as the file ended up present.
+                    if (!File.Exists(exe)) throw;
+                }
+            }
+
+            return exe;
+        }
+
+        private static void LaunchApp(string exe, string[] args)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = exe,
+                UseShellExecute = false,
+                WorkingDirectory = Path.GetDirectoryName(exe),
+            };
+
+            // Forward our command line (e.g. file paths from "Open with…") verbatim.
+            foreach (string a in args)
+            {
+                psi.ArgumentList.Add(a);
+            }
+
+            Process.Start(psi);
+        }
+
+        // ---- win32 -------------------------------------------------------------
+
+        private static void ShowError(string message)
+        {
+            const uint MB_ICONERROR = 0x10;
+            MessageBoxW(IntPtr.Zero, message, "nplus", MB_ICONERROR);
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = false)]
+        private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
+    }
+}

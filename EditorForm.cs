@@ -89,7 +89,7 @@ namespace nplus
             {
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", 11),
-                BorderStyle = BorderStyle.None,
+                BorderStyle = System.Windows.Forms.BorderStyle.None,
                 Indent = 25
             };
 
@@ -349,7 +349,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 1.4t";
+            this.Text = "n+ - V 2.1c";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -798,7 +798,7 @@ namespace nplus
             {
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", 11),
-                BorderStyle = BorderStyle.None,
+                BorderStyle = System.Windows.Forms.BorderStyle.None,
                 Indent = 25
             };
 
@@ -851,7 +851,7 @@ namespace nplus
                 FullRowSelect = true,
                 GridLines = true,
                 Font = new Font("Consolas", 9.5f),
-                BorderStyle = BorderStyle.None
+                BorderStyle = System.Windows.Forms.BorderStyle.None
             };
             _resultsListView.Columns.Add("File", 250);
             _resultsListView.Columns.Add("Line", 55);
@@ -1768,7 +1768,7 @@ namespace nplus
 
         private void ApplyJsonLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.Json;
+            editor.LexerName = "json";
 
             // Base colors
             editor.Styles[Style.Json.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
@@ -2542,7 +2542,7 @@ namespace nplus
             var editor = GetActiveEditor();
 
             editor.Text = @"========================================================================
-                 n+ - V 1.4t
+                 n+ - V 2.1c
                  USER'S GUIDE
 ========================================================================
 
@@ -4733,7 +4733,7 @@ namespace nplus
 
         private void ApplyCSharpLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.Cpp;
+            editor.LexerName = "cpp";
 
             editor.Styles[Style.Cpp.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
             editor.Styles[Style.Cpp.Comment].ForeColor = _isDarkMode ? Color.SeaGreen : Color.Green;
@@ -4754,7 +4754,7 @@ namespace nplus
 
         private void ApplySqlLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.Sql;
+            editor.LexerName = "sql";
 
             editor.Styles[Style.Sql.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
             editor.Styles[Style.Sql.Comment].ForeColor = _isDarkMode ? Color.SeaGreen : Color.Green;
@@ -4772,7 +4772,7 @@ namespace nplus
 
         private void ApplyPythonLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.Python;
+            editor.LexerName = "python";
 
             editor.Styles[Style.Python.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
             editor.Styles[Style.Python.CommentLine].ForeColor = _isDarkMode ? Color.SeaGreen : Color.Green;
@@ -4790,7 +4790,7 @@ namespace nplus
 
         private void ApplyJavaScriptLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.Cpp;
+            editor.LexerName = "cpp";
 
             editor.Styles[Style.Cpp.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
             editor.Styles[Style.Cpp.Comment].ForeColor = _isDarkMode ? Color.SeaGreen : Color.Green;
@@ -4809,7 +4809,7 @@ namespace nplus
 
         private void ApplyHtmlXmlLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.Html;
+            editor.LexerName = "hypertext";
 
             editor.Styles[Style.Html.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
             editor.Styles[Style.Html.Tag].ForeColor = _isDarkMode ? Color.DeepSkyBlue : Color.Blue;
@@ -4830,7 +4830,7 @@ namespace nplus
 
         private void ApplyVbLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.Vb;
+            editor.LexerName = "vb";
 
             editor.Styles[Style.Vb.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
             editor.Styles[Style.Vb.Comment].ForeColor = _isDarkMode ? Color.SeaGreen : Color.Green;
@@ -4849,7 +4849,7 @@ namespace nplus
 
         private void ApplyVbScriptLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.Vb;
+            editor.LexerName = "vb";
 
             editor.Styles[Style.Vb.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
             editor.Styles[Style.Vb.Comment].ForeColor = _isDarkMode ? Color.SeaGreen : Color.Green;
@@ -4866,7 +4866,7 @@ namespace nplus
 
         private void ApplyJavaLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.Cpp;
+            editor.LexerName = "cpp";
 
             editor.Styles[Style.Cpp.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
             editor.Styles[Style.Cpp.Comment].ForeColor = _isDarkMode ? Color.SeaGreen : Color.Green;
@@ -4886,7 +4886,7 @@ namespace nplus
 
         private void ApplyPowerShellLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.PowerShell;
+            editor.LexerName = "powershell";
 
             editor.Styles[Style.PowerShell.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
             editor.Styles[Style.PowerShell.Comment].ForeColor = _isDarkMode ? Color.SeaGreen : Color.Green;
@@ -4908,7 +4908,7 @@ namespace nplus
 
         private void ApplyPhpLexer(Scintilla editor)
         {
-            editor.Lexer = Lexer.Cpp;
+            editor.LexerName = "cpp";
 
             editor.Styles[Style.Cpp.Default].ForeColor = _isDarkMode ? Color.Silver : Color.Black;
             editor.Styles[Style.Cpp.Comment].ForeColor = _isDarkMode ? Color.SeaGreen : Color.Green;
@@ -4928,8 +4928,8 @@ namespace nplus
 
         private void ApplyYamlLexer(Scintilla editor)
         {
-            // YAML is Scintilla lexer ID 48 (SCLEX_YAML) — not in ScintillaNET's enum
-            editor.Lexer = (Lexer)48;
+            // YAML lexer, supplied by Lexilla in Scintilla 5
+            editor.LexerName = "yaml";
 
             // YAML style indices: 0=Default, 1=Comment, 2=Identifier/Key, 3=Keyword,
             // 4=Number, 5=Reference, 6=Document, 7=Text, 8=Error, 9=Operator
@@ -4991,8 +4991,8 @@ namespace nplus
                 case ".ps1": case ".psm1": case ".psd1": case ".ps": ApplyPowerShellLexer(editor); break;
                 case ".php": ApplyPhpLexer(editor); break;
                 case ".yml": case ".yaml": ApplyYamlLexer(editor); break;
-                case ".csv": editor.Lexer = Lexer.Null; break;
-                default: editor.Lexer = Lexer.Null; break;
+                case ".csv": editor.LexerName = "null"; break;
+                default: editor.LexerName = "null"; break;
             }
 
             ConfigureFolding(editor);
