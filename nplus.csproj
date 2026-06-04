@@ -54,10 +54,10 @@
   <!-- The Bootstrap\ folder is a separate Native AOT launcher project. Keep its
        sources/output out of this app project (SDK auto-globs **\*.cs otherwise). -->
   <ItemGroup>
-    <Compile Remove="Bootstrap\**;tests\**" />
-    <EmbeddedResource Remove="Bootstrap\**;tests\**" />
-    <Content Remove="Bootstrap\**;tests\**" />
-    <None Remove="Bootstrap\**;tests\**" />
+    <Compile Remove="Bootstrap\**" />
+    <EmbeddedResource Remove="Bootstrap\**" />
+    <Content Remove="Bootstrap\**" />
+    <None Remove="Bootstrap\**" />
   </ItemGroup>
 
   <ItemGroup>
