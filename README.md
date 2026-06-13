@@ -52,6 +52,13 @@ Grab the latest `nplus.exe` from the [GitHub Releases page](https://github.com/m
   end
   ```
 
+### AI Assistant (optional)
+- **Off by default** — nothing runs until you turn it on in **AI → Enable AI Assistant** and pick a provider in **AI → Settings**
+- **Bring your own backend** — choose **OpenAI (ChatGPT)**, **Azure OpenAI**, **Claude (Anthropic)**, **Gemini (Google)**, **Ollama (local)**, or **Perplexity**; each keeps its own key/model, with a **Test Connection** button in Settings
+- **Selection actions** — *Explain*, *Improve / Rewrite*, or a *Custom Prompt* on the current selection (or whole document); results open in an editable dialog with **Replace Selection / New Tab / Copy**
+- **Chat panel** — a dockable conversational panel with **streaming (token-by-token) responses** that can optionally attach the current document as context (`Ctrl+Enter` to send)
+- Keys are stored locally in `%AppData%\nplus\ai_settings.json` and sent only to the provider you select. No provider SDKs are bundled — it's plain HTTPS, so the single-file build is unaffected.
+
 ### Find / Replace / Mark / Find in Files
 - Normal, Extended (`\n`, `\t`), and Regex modes (`Ctrl+F`, `Ctrl+H`, `Ctrl+B`)
 - **Mark** tab highlights all matches and can drop a bookmark on every matching line
@@ -128,6 +135,7 @@ The result is **framework-dependent** (the app needs the .NET 8 Desktop Runtime)
 | --- | --- |
 | `nplus.csproj`, `*.cs` | The WinForms editor application. |
 | `LuaScripting.cs` | The MoonSharp Lua engine: script host, the `editor`/`app` APIs, and the Script Console. |
+| `AiAssistant.cs` | The optional AI assistant: multi-provider HTTP client, settings/result dialogs, and the chat panel. |
 | `native\win-x64\` | Scintilla / Lexilla native DLLs, embedded into the app exe as resources. |
 | `Bootstrap\nplus.bootstrap.csproj` | The Native AOT launcher (`Program.cs`). |
 | `Bootstrap\RuntimeInstaller.cs` | Runtime detection / download / install logic, kept separate and UI-free. |

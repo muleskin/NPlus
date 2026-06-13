@@ -306,6 +306,14 @@ namespace nplus
         private readonly string _macrosFilePath;
         private readonly string _scriptsFolder;
 
+        // Optional AI assistant (see AiAssistant.cs). Off unless the user enables it.
+        private readonly string _aiSettingsPath;
+        private AiSettings _aiSettings;
+        private readonly AiClient _aiClient = new AiClient();
+        private AiChatPanel _chatPanel;
+        private SplitContainer _aiSplit;
+        private ToolStripMenuItem _enableAiMenuItem;
+
         // Recent Files
         private const int MaxRecentFiles = 10;
         private List<string> _recentFiles = new List<string>();
@@ -327,6 +335,8 @@ namespace nplus
             _recentFilesPath = Path.Combine(_appDataFolder, "recentfiles.txt");
             _macrosFilePath = Path.Combine(_appDataFolder, "macros.json");
             _scriptsFolder = Path.Combine(_appDataFolder, "scripts");
+            _aiSettingsPath = Path.Combine(_appDataFolder, "ai_settings.json");
+            _aiSettings = AiSettings.Load(_aiSettingsPath);
 
             // Ensure the backup directory exists
             Directory.CreateDirectory(_backupFolderPath);
@@ -503,6 +513,26 @@ namespace nplus
             scriptMenu.DropDownItems.Add("-");
             scriptMenu.DropDownItems.Add("Open Scripts Folder", null, (s, e) => OpenScriptsFolder());
 
+            var aiMenu = new ToolStripMenuItem("AI");
+            _enableAiMenuItem = new ToolStripMenuItem("Enable AI Assistant")
+            {
+                CheckOnClick = true,
+                Checked = _aiSettings.Enabled,
+            };
+            _enableAiMenuItem.CheckedChanged += (s, e) =>
+            {
+                _aiSettings.Enabled = _enableAiMenuItem.Checked;
+                _aiSettings.Save(_aiSettingsPath);
+            };
+            aiMenu.DropDownItems.Add(_enableAiMenuItem);
+            aiMenu.DropDownItems.Add("Settings...", null, (s, e) => ShowAiSettings());
+            aiMenu.DropDownItems.Add("-");
+            aiMenu.DropDownItems.Add("Explain Selection", null, (s, e) => AiExplainSelection());
+            aiMenu.DropDownItems.Add("Improve / Rewrite Selection", null, (s, e) => AiImproveSelection());
+            aiMenu.DropDownItems.Add("Custom Prompt on Selection...", null, (s, e) => AiCustomPrompt());
+            aiMenu.DropDownItems.Add("-");
+            aiMenu.DropDownItems.Add("Show / Hide Chat Panel", null, (s, e) => ToggleChatPanel());
+
             var toolsMenu = new ToolStripMenuItem("Tools");
             var jsonMenu = new ToolStripMenuItem("JSON");
             jsonMenu.DropDownItems.Add("Format / Pretty Print JSON", null, (s, e) => FormatJson());
@@ -569,6 +599,7 @@ namespace nplus
             mainMenu.Items.Add(viewMenu);
             mainMenu.Items.Add(macroMenu);
             mainMenu.Items.Add(scriptMenu);
+            mainMenu.Items.Add(aiMenu);
             mainMenu.Items.Add(toolsMenu);
             mainMenu.Items.Add(_encodingMenu);
             mainMenu.Items.Add(helpMenu);
@@ -856,7 +887,22 @@ namespace nplus
             };
 
             _mainSplit.Panel1.Controls.Add(_jsonPanel);
-            _mainSplit.Panel2.Controls.Add(tcDocuments);
+
+            // --- AI CHAT PANEL (right of the editor, initially hidden) ---
+            _chatPanel = new AiChatPanel(() => _aiSettings, () => GetActiveEditor()?.Text ?? "");
+            _chatPanel.CloseRequested += (s, e) => { _aiSplit.Panel2Collapsed = true; };
+
+            _aiSplit = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Vertical,
+                Panel2Collapsed = true,
+                SplitterWidth = 4,
+                FixedPanel = FixedPanel.Panel2
+            };
+            _aiSplit.Panel1.Controls.Add(tcDocuments);
+            _aiSplit.Panel2.Controls.Add(_chatPanel);
+            _mainSplit.Panel2.Controls.Add(_aiSplit);
 
             // --- SEARCH RESULTS PANEL (bottom, initially hidden) ---
             _resultsListView = new ListView
@@ -2386,6 +2432,127 @@ namespace nplus
             }
         }
 
+        // --- AI assistant handlers (see AiAssistant.cs) ---
+
+        private void ShowAiSettings()
+        {
+            using var dlg = new AiSettingsDialog(_aiSettings);
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+            {
+                _aiSettings = dlg.Result;
+                _aiSettings.Save(_aiSettingsPath);
+                _enableAiMenuItem.Checked = _aiSettings.Enabled;
+            }
+        }
+
+        private void ToggleChatPanel()
+        {
+            if (_aiSplit.Panel2Collapsed)
+            {
+                _aiSplit.Panel2Collapsed = false;
+                // Reserve ~360px for the chat on the right.
+                _aiSplit.SplitterDistance = Math.Max(200, _aiSplit.Width - 360);
+                _chatPanel.ApplyTheme(_isDarkMode);
+            }
+            else
+            {
+                _aiSplit.Panel2Collapsed = true;
+            }
+        }
+
+        // True only when AI is enabled and the active provider has what it needs.
+        private bool EnsureAiReady()
+        {
+            if (_aiSettings == null || !_aiSettings.Enabled)
+            {
+                MessageBox.Show("AI features are off. Turn them on via AI → Enable AI Assistant, then set a provider in AI → Settings.",
+                    "n+ AI", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+            var cfg = _aiSettings.For(_aiSettings.Provider);
+            if (AiDefaults.NeedsApiKey(_aiSettings.Provider) && string.IsNullOrWhiteSpace(cfg.ApiKey))
+            {
+                MessageBox.Show("No API key is set for " + AiDefaults.Display(_aiSettings.Provider) +
+                    ".\nSet one in AI → Settings.", "n+ AI", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+            return true;
+        }
+
+        private void AiExplainSelection()
+            => RunAiSelectionAction("Explain",
+                "You are a coding assistant inside a text editor. Explain the following text or code clearly and concisely.",
+                rawInstruction: null);
+
+        private void AiImproveSelection()
+            => RunAiSelectionAction("Improve",
+                "You are a coding assistant. Rewrite and improve the following text or code. Return ONLY the improved version, with no commentary and no code fences.",
+                rawInstruction: null);
+
+        private void AiCustomPrompt()
+        {
+            string instruction = LuaInputBox.Show(
+                "Instruction for the AI (applied to the selection, or the whole document if nothing is selected):",
+                "n+ AI — Custom Prompt", "");
+            if (string.IsNullOrWhiteSpace(instruction)) return;
+            RunAiSelectionAction("Custom",
+                "You are a coding assistant. Apply the user's instruction to the provided text. Return only the resulting text unless the instruction asks for an explanation.",
+                rawInstruction: instruction);
+        }
+
+        private async void RunAiSelectionAction(string title, string system, string rawInstruction)
+        {
+            if (!EnsureAiReady()) return;
+            var editor = GetActiveEditor();
+            if (editor == null) return;
+
+            string sel = editor.SelectedText;
+            bool hadSelection = !string.IsNullOrEmpty(sel);
+            string source = hadSelection ? sel : editor.Text;
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                MessageBox.Show("Nothing to send — the document is empty.", "n+ AI",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string userContent = rawInstruction == null
+                ? source
+                : "Instruction: " + rawInstruction + "\n\nText:\n" + source;
+            var messages = new List<AiMessage> { new AiMessage("user", userContent) };
+
+            UseWaitCursor = true;
+            try
+            {
+                string result = await _aiClient.CompleteAsync(_aiSettings, messages, system, System.Threading.CancellationToken.None);
+                UseWaitCursor = false;
+
+                using var dlg = new AiResultDialog(title, result, hadSelection, _isDarkMode);
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    switch (dlg.ChosenAction)
+                    {
+                        case AiResultAction.Replace:
+                            if (hadSelection) editor.ReplaceSelection(dlg.ResultText);
+                            else editor.Text = dlg.ResultText;
+                            break;
+                        case AiResultAction.NewTab:
+                            NewTabWithText(title + " result", dlg.ResultText);
+                            break;
+                        case AiResultAction.Copy:
+                            if (!string.IsNullOrEmpty(dlg.ResultText)) Clipboard.SetText(dlg.ResultText);
+                            break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                UseWaitCursor = false;
+                MessageBox.Show("AI request failed:\n" + ex.Message, "n+ AI",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         public void RecordMacroStep(MacroStep step)
         {
             if (_isRecording) _currentMacro.Add(step);
@@ -2948,6 +3115,8 @@ namespace nplus
             // Update the new Status Bar colors based on the theme
             statusBar.BackColor = _isDarkMode ? Color.FromArgb(45, 45, 48) : SystemColors.Control;
             statusBar.ForeColor = _isDarkMode ? Color.LightGray : Color.Black;
+
+            _chatPanel?.ApplyTheme(_isDarkMode);
         }
 
         private void UpdateToolbarState()
