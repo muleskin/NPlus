@@ -193,6 +193,10 @@ namespace nplus
             Color.FromArgb(224, 90,  90),    // 4 - Red
             Color.FromArgb(240, 150, 90),    // 5 - Orange
         };
+        private static readonly string[] _tabColorNames =
+        {
+            "Yellow", "Green", "Blue", "Red", "Orange",
+        };
         // General file change detection (prompts user on external changes/deletions)
         private Dictionary<TabPage, FileSystemWatcher> _fileChangeWatchers = new Dictionary<TabPage, FileSystemWatcher>();
         private bool _isSwitchingTabs = false;
@@ -300,6 +304,7 @@ namespace nplus
         private readonly string _settingsFilePath;
         private readonly string _recentFilesPath;
         private readonly string _macrosFilePath;
+        private readonly string _scriptsFolder;
 
         // Recent Files
         private const int MaxRecentFiles = 10;
@@ -321,9 +326,12 @@ namespace nplus
             _settingsFilePath = Path.Combine(_appDataFolder, "settings.txt");
             _recentFilesPath = Path.Combine(_appDataFolder, "recentfiles.txt");
             _macrosFilePath = Path.Combine(_appDataFolder, "macros.json");
+            _scriptsFolder = Path.Combine(_appDataFolder, "scripts");
 
             // Ensure the backup directory exists
             Directory.CreateDirectory(_backupFolderPath);
+            Directory.CreateDirectory(_scriptsFolder);
+            SeedExampleScripts();
 
             LoadSettings();
             LoadMacros();
@@ -349,7 +357,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 2.1c";
+            this.Text = "n+ - V 2.6p";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -489,6 +497,12 @@ namespace nplus
                 trimSaveItem, modifyMacroItem
             });
 
+            var scriptMenu = new ToolStripMenuItem("Scripts");
+            scriptMenu.DropDownItems.Add("Lua Script Console...", null, (s, e) => ShowLuaConsole());
+            scriptMenu.DropDownItems.Add("Run Lua Script File...", null, (s, e) => RunLuaScriptFile());
+            scriptMenu.DropDownItems.Add("-");
+            scriptMenu.DropDownItems.Add("Open Scripts Folder", null, (s, e) => OpenScriptsFolder());
+
             var toolsMenu = new ToolStripMenuItem("Tools");
             var jsonMenu = new ToolStripMenuItem("JSON");
             jsonMenu.DropDownItems.Add("Format / Pretty Print JSON", null, (s, e) => FormatJson());
@@ -554,6 +568,7 @@ namespace nplus
             mainMenu.Items.Add(editMenu);
             mainMenu.Items.Add(viewMenu);
             mainMenu.Items.Add(macroMenu);
+            mainMenu.Items.Add(scriptMenu);
             mainMenu.Items.Add(toolsMenu);
             mainMenu.Items.Add(_encodingMenu);
             mainMenu.Items.Add(helpMenu);
@@ -2258,6 +2273,119 @@ namespace nplus
 
         public Scintilla GetActiveEditor() => tcDocuments.SelectedTab?.Controls[0] as Scintilla;
 
+        // --- Hooks for the Lua scripting engine (see LuaScripting.cs) ---
+
+        /// <summary>Full path of the active tab's file, or null for an unsaved tab.</summary>
+        public string GetActiveFilePath() => GetActiveEditor()?.Tag as string;
+
+        /// <summary>Display title (tab text) of the active tab.</summary>
+        public string GetActiveTitle() => tcDocuments.SelectedTab?.Text;
+
+        /// <summary>Opens text in a fresh editor tab — used by scripts (app.NewTab).</summary>
+        public void NewTabWithText(string title, string text)
+        {
+            AddNewTab(title);
+            var editor = GetActiveEditor();
+            if (editor != null) editor.Text = text ?? "";
+        }
+
+        // --- Scripts menu handlers ---
+
+        private void ShowLuaConsole()
+        {
+            using var console = new LuaScriptConsole(this);
+            console.ShowDialog(this);
+        }
+
+        private void RunLuaScriptFile()
+        {
+            using var dlg = new OpenFileDialog
+            {
+                Title = "Run Lua Script",
+                Filter = "Lua scripts (*.lua)|*.lua|All files (*.*)|*.*",
+                InitialDirectory = Directory.Exists(_scriptsFolder) ? _scriptsFolder : null
+            };
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+            string code;
+            try
+            {
+                code = File.ReadAllText(dlg.FileName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not read script:\n" + ex.Message, "n+",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            var host = new LuaScriptHost(this);
+            string output = host.Run(code, out bool ok);
+
+            // Only interrupt the user on error or when the script actually printed something.
+            if (!ok)
+            {
+                MessageBox.Show(output, "Lua Script Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else if (!string.IsNullOrWhiteSpace(output))
+            {
+                MessageBox.Show(output, "Lua Script Output",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        // Writes the embedded starter scripts into the user's scripts folder once.
+        // A marker file keeps us from re-creating examples the user has since deleted.
+        private void SeedExampleScripts()
+        {
+            try
+            {
+                string marker = Path.Combine(_scriptsFolder, ".examples_seeded");
+                if (File.Exists(marker)) return;
+
+                var asm = System.Reflection.Assembly.GetExecutingAssembly();
+                const string prefix = "nplus.scripts.";
+                foreach (string res in asm.GetManifestResourceNames())
+                {
+                    if (!res.StartsWith(prefix, StringComparison.Ordinal)) continue;
+
+                    string fileName = res.Substring(prefix.Length);
+                    string dest = Path.Combine(_scriptsFolder, fileName);
+                    if (File.Exists(dest)) continue;
+
+                    using Stream src = asm.GetManifestResourceStream(res);
+                    if (src == null) continue;
+                    using FileStream dst = new FileStream(dest, FileMode.Create, FileAccess.Write);
+                    src.CopyTo(dst);
+                }
+
+                File.WriteAllText(marker, "Delete this file to restore the example scripts on next launch.");
+            }
+            catch
+            {
+                // Seeding examples is best-effort; never block startup over it.
+            }
+        }
+
+        private void OpenScriptsFolder()
+        {
+            try
+            {
+                Directory.CreateDirectory(_scriptsFolder);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = _scriptsFolder,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Could not open scripts folder:\n" + ex.Message, "n+",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         public void RecordMacroStep(MacroStep step)
         {
             if (_isRecording) _currentMacro.Add(step);
@@ -2542,7 +2670,7 @@ namespace nplus
             var editor = GetActiveEditor();
 
             editor.Text = @"========================================================================
-                 n+ - V 2.1c
+                 n+ - V 2.6p
                  USER'S GUIDE
 ========================================================================
 
@@ -2766,8 +2894,8 @@ namespace nplus
 
 25. TAB COLOR TAGS (Right-Click a Tab)
    - Right-click any file tab to open its context menu.
-   - Choose 'Apply Color 1' through 'Apply Color 5' to tag the tab with
-     one of five colors (Yellow, Green, Blue, Red, Orange). Each menu
+   - Choose 'Apply Yellow', 'Apply Green', 'Apply Blue', 'Apply Red', or
+     'Apply Orange' to tag the tab with one of five colors. Each menu
      entry shows a swatch of its color, and the color currently in use is
      check-marked.
    - Choose 'Remove Color' to clear the tag and return the tab to its
@@ -4319,7 +4447,7 @@ namespace nplus
                     g.DrawRectangle(Pens.Gray, 0, 0, 15, 15);
                 }
 
-                var item = new ToolStripMenuItem($"Apply Color {colorIndex}", bmp, (s, e) => SetTabColor(page, colorIndex));
+                var item = new ToolStripMenuItem($"Apply {_tabColorNames[i]}", bmp, (s, e) => SetTabColor(page, colorIndex));
                 _tabColorIndex.TryGetValue(page, out int current);
                 item.Checked = (current == colorIndex);
                 menu.Items.Add(item);

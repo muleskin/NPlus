@@ -32,6 +32,26 @@ Grab the latest `nplus.exe` from the [GitHub Releases page](https://github.com/m
 - Playback once, N times, or to end-of-file (great for log processing)
 - **Save, load, and edit macros** step-by-step — saved macros persist between sessions
 
+### Lua Scripting
+- **Built-in Lua engine** ([MoonSharp](https://www.moonsharp.org/)) for programmable, document-aware automation — loops, conditionals, regex, and variables that the record/replay macro engine can't express
+- **Lua Script Console** — a REPL window (`Ctrl+Enter` to run); globals persist between runs
+- **Run Lua Script File...** — execute a `.lua` file against the active document
+- User scripts live in `%AppData%\nplus\scripts` (open it from **Scripts → Open Scripts Folder**)
+- Each script runs as a **single undo action**, so any change is one `Ctrl+Z` away
+- Two globals are exposed to every script:
+  - `editor.*` — read/mutate the active document: `GetText` / `SetText` / `AppendText`, `GetSelectedText` / `ReplaceSelection`, `GetLine` / `SetLine` / `GetLineCount` / `GotoLine` (1-based), caret and selection access, `GetFileName` / `GetTitle`
+  - `app.*` — `MessageBox`, `Confirm`, `Prompt`, `NewTab`, clipboard access, plus `print(...)` collected into the output
+
+  ```lua
+  -- Uppercase the whole document
+  editor.SetText(editor.GetText():upper())
+
+  -- Prefix every line with its number
+  for i = 1, editor.GetLineCount() do
+    editor.SetLine(i, i .. ": " .. editor.GetLine(i))
+  end
+  ```
+
 ### Find / Replace / Mark / Find in Files
 - Normal, Extended (`\n`, `\t`), and Regex modes (`Ctrl+F`, `Ctrl+H`, `Ctrl+B`)
 - **Mark** tab highlights all matches and can drop a bookmark on every matching line
@@ -107,6 +127,7 @@ The result is **framework-dependent** (the app needs the .NET 8 Desktop Runtime)
 | Path | What it is |
 | --- | --- |
 | `nplus.csproj`, `*.cs` | The WinForms editor application. |
+| `LuaScripting.cs` | The MoonSharp Lua engine: script host, the `editor`/`app` APIs, and the Script Console. |
 | `native\win-x64\` | Scintilla / Lexilla native DLLs, embedded into the app exe as resources. |
 | `Bootstrap\nplus.bootstrap.csproj` | The Native AOT launcher (`Program.cs`). |
 | `Bootstrap\RuntimeInstaller.cs` | Runtime detection / download / install logic, kept separate and UI-free. |
@@ -115,6 +136,7 @@ The result is **framework-dependent** (the app needs the .NET 8 Desktop Runtime)
 ### Dependencies
 - [Scintilla5.NET](https://www.nuget.org/packages/Scintilla5.NET) 6.1.2 — editor control (Scintilla 5.5.5 + Lexilla 5.4.3)
 - [Be.Windows.Forms.HexBox.Net5](https://www.nuget.org/packages/Be.Windows.Forms.HexBox.Net5) 1.8.0 — read-only hex view
+- [MoonSharp](https://www.nuget.org/packages/MoonSharp) 2.0.0 — pure-managed Lua interpreter for the scripting engine (no native deps, so it folds into the single-file build)
 - `System.Text.Json` (built into .NET 8) for JSON formatting / tree view
 
 ## License

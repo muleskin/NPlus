@@ -63,6 +63,9 @@
   <ItemGroup>
     <PackageReference Include="Scintilla5.NET" Version="6.1.2" />
     <PackageReference Include="Be.Windows.Forms.HexBox.Net5" Version="1.8.0" />
+    <!-- Pure-managed Lua interpreter for the scripting engine. No native deps, so it
+         folds into the single-file publish with no changes to NativeBootstrap. -->
+    <PackageReference Include="MoonSharp" Version="2.0.0" />
   </ItemGroup>
 
   <!-- Embed the native Scintilla/Lexilla DLLs into the exe. NativeBootstrap
@@ -71,6 +74,12 @@
   <ItemGroup>
     <EmbeddedResource Include="native\win-x64\Scintilla.dll" LogicalName="nplus.native.Scintilla.dll" />
     <EmbeddedResource Include="native\win-x64\Lexilla.dll" LogicalName="nplus.native.Lexilla.dll" />
+  </ItemGroup>
+
+  <!-- Starter Lua scripts, embedded so the single-file exe can seed them into
+       %AppData%\nplus\scripts on first run (see SeedExampleScripts in EditorForm). -->
+  <ItemGroup>
+    <EmbeddedResource Include="scripts\*.lua" LogicalName="nplus.scripts.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- Scintilla5.NET's build targets copy runtimes\<rid>\native\*.dll next to the
