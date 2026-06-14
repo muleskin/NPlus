@@ -56,6 +56,7 @@ Grab the latest `nplus.exe` from the [GitHub Releases page](https://github.com/m
 - **Off by default** — nothing runs until you turn it on in **AI → Enable AI Assistant** and pick a provider in **AI → Settings**
 - **Bring your own backend** — choose **OpenAI (ChatGPT)**, **Azure OpenAI**, **Claude (Anthropic)**, **Gemini (Google)**, **Ollama (local)**, or **Perplexity**; each keeps its own key/model, with a **Test Connection** button in Settings
 - **Selection actions** — *Explain*, *Improve / Rewrite*, or a *Custom Prompt* on the current selection (or whole document); results open in an editable dialog with **Replace Selection / New Tab / Copy**
+- **Agent mode (Action Protocol)** — let the AI *perform tasks* on the active tab. The model replies with a provider-agnostic JSON action plan (`replaceDocument`, `replaceSelection`, `replaceLine`, `deleteLines`, `replace`, `insert`, …); n+ simulates it, shows a **diff preview**, and applies it **only after you confirm** — as a single undo step. Available from **AI → Run Agent Task on Tab…** or the chat panel's **Agent mode** checkbox. Works on every provider (no native tool-calling required).
 - **Chat panel** — a dockable conversational panel with **streaming (token-by-token) responses** that can optionally attach the current document as context (`Ctrl+Enter` to send)
 - Keys are stored locally in `%AppData%\nplus\ai_settings.json` and sent only to the provider you select. No provider SDKs are bundled — it's plain HTTPS, so the single-file build is unaffected.
 
@@ -136,6 +137,7 @@ The result is **framework-dependent** (the app needs the .NET 8 Desktop Runtime)
 | `nplus.csproj`, `*.cs` | The WinForms editor application. |
 | `LuaScripting.cs` | The MoonSharp Lua engine: script host, the `editor`/`app` APIs, and the Script Console. |
 | `AiAssistant.cs` | The optional AI assistant: multi-provider HTTP client, settings/result dialogs, and the chat panel. |
+| `AiActions.cs` | The AI Action Protocol: JSON action parsing, edit simulation, line-diff, and the preview/confirm dialog. |
 | `native\win-x64\` | Scintilla / Lexilla native DLLs, embedded into the app exe as resources. |
 | `Bootstrap\nplus.bootstrap.csproj` | The Native AOT launcher (`Program.cs`). |
 | `Bootstrap\RuntimeInstaller.cs` | Runtime detection / download / install logic, kept separate and UI-free. |

@@ -760,6 +760,7 @@ namespace nplus
     {
         private readonly Func<AiSettings> _getSettings;
         private readonly Func<string> _getDocText;
+        private readonly Func<string, Task<string>> _runAgent;
         private readonly AiClient _client = new AiClient();
         private readonly List<AiMessage> _history = new List<AiMessage>();
 
@@ -769,13 +770,15 @@ namespace nplus
         private readonly TextBox _input;
         private readonly Button _send;
         private readonly CheckBox _attachDoc;
+        private readonly CheckBox _agentMode;
 
         public event EventHandler CloseRequested;
 
-        public AiChatPanel(Func<AiSettings> getSettings, Func<string> getDocText)
+        public AiChatPanel(Func<AiSettings> getSettings, Func<string> getDocText, Func<string, Task<string>> runAgent)
         {
             _getSettings = getSettings;
             _getDocText = getDocText;
+            _runAgent = runAgent;
 
             Dock = DockStyle.Fill;
 
@@ -805,6 +808,7 @@ namespace nplus
             };
 
             _attachDoc = new CheckBox { Text = "Attach current document as context", Dock = DockStyle.Top, Height = 24, Padding = new Padding(6, 0, 0, 0) };
+            _agentMode = new CheckBox { Text = "Agent mode (edit this tab, with preview)", Dock = DockStyle.Top, Height = 24, Padding = new Padding(6, 0, 0, 0) };
 
             _input = new TextBox
             {
@@ -825,6 +829,7 @@ namespace nplus
 
             Controls.Add(_output);
             Controls.Add(_attachDoc);
+            Controls.Add(_agentMode);
             Controls.Add(inputBar);
             Controls.Add(headerPanel);
         }
@@ -844,6 +849,31 @@ namespace nplus
             if (settings == null || !settings.Enabled)
             {
                 AppendBlock("[AI is disabled. Enable it in AI → Settings.]");
+                return;
+            }
+
+            // Agent mode: route to the editor's previewed-edit pipeline instead of chat.
+            if (_agentMode.Checked && _runAgent != null)
+            {
+                _input.Clear();
+                AppendBlock("You (agent): " + text);
+                _send.Enabled = false;
+                _input.Enabled = false;
+                try
+                {
+                    string status = await _runAgent(text);
+                    AppendBlock("AI: " + status);
+                }
+                catch (Exception ex)
+                {
+                    AppendBlock("[Error: " + ex.Message + "]");
+                }
+                finally
+                {
+                    _send.Enabled = true;
+                    _input.Enabled = true;
+                    _input.Focus();
+                }
                 return;
             }
 
@@ -927,6 +957,7 @@ namespace nplus
             _header.BackColor = headerBg; _header.ForeColor = dark ? Color.Gainsboro : Color.Black;
             if (_header.Parent != null) _header.Parent.BackColor = headerBg;
             _attachDoc.BackColor = headerBg; _attachDoc.ForeColor = dark ? Color.Gainsboro : Color.Black;
+            _agentMode.BackColor = headerBg; _agentMode.ForeColor = dark ? Color.Gainsboro : Color.Black;
             _closeBtn.BackColor = headerBg; _closeBtn.ForeColor = dark ? Color.Gainsboro : Color.Black;
         }
     }

@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace nplus
@@ -164,6 +165,7 @@ namespace nplus
         private static readonly string _ico_colselect = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAW0lEQVR4nGNgGAUEACMxitx6Lv3HJberRA+vGSiSPT3TsBq0i8EGt+UMR7CKl5RkMWJYgNMQCnxAFMBlAT6LYWA0iEaDCL8Fo0FE0ILRICJowcgIIiZiLBjZAAB/9Vpu0oLm2AAAAABJRU5ErkJggg==";
         private static readonly string _ico_undo = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAgklEQVR4nGNgGAXDHjCSotit59J/dLFdJXp4zSDKAmwGE2sRQQuQDcdmCCF5goYT43pS1ZKnAYceJlIMoBogx/W49NLcB0RbQK6PiLKAXMOJsoASw3FaAMsw5CRTZP04LcBlMCELseVkvFmbnMINHeCNg10leowkly+UAEojfBRgBQBjT0+i6V2m8wAAAABJRU5ErkJggg==";
         private static readonly string _ico_playmacro = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAeElEQVR4nO3Vuw2AMAwE0ANlLEZgDMZiDEbIXlBZsiKQ/xJFrnRxT5cmwMyvs13HHe1YNUgEEgEOlQKEWCETwKFSgBAN5Aa0UBjgUClAyAi1TKDv5zLe0ha8lQMJC76Kw4BUTHE9kbYcMC6wFFPUCzzlYjL+gxkxDy27Lr81Sif2AAAAAElFTkSuQmCC";
+        private static readonly string _ico_aichat = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAErSURBVEhL3ZShUgMxGIQrkUgkEomkl71bgkKjUAwSWYmsQ4LjMcDxCJU8QiWyEgmzw19Iwv2dS3sYdmZnLtnrt80lk8nkX2o65VEIPK110/C4ZGUieQjEBRA/tnUI8U1lJVvwPSC+2ouLEOJ8Cz9ZyYrkQVag5Vn4kgWVAs7uxGlbXmeBJqxgngWVcjluUCmX4wXaMO3P0LHH6Q1+5ng7ZOxx3IDkvsY6vkPGHmdzUCmX4waVcjluUCmXA/BcARAfs6BSTcMb2/hZFtiGvX+ZMx2/rusu7Nlxd5VedgAvgbhUQe/Fp+WpwFay0W37ey7xfcn+lo6cvp8MxOeeH8srID6s38vNk5Lpar1hxT9epud+J6UFo8OlomBcuJQUjA+XrOBv4JJdxTvBPwFqbyZgt571uwAAAABJRU5ErkJggg==";
         private static readonly string _ico_livemonitor = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAj0lEQVR4nGNgGAX0BncC3P7fCXD7D+MzUdtwdDYjLQxHBiz4NNlsSYFrOuIzhyzHUC2IVDbswnCAyoZdjFSNA2RLsFmIAmy2pPyHBRFyUJEK8MYBuoXIfGLjhKpBRLIF2FwJEyM22LBaQEgzKUkWHgfkRCQxDiEqDsjNZCQB5GRLCiDKB5TkA5on01EwAgAAJMg6MJ2h2xEAAAAASUVORK5CYII=";
         private static readonly string _ico_jsontree = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAe0lEQVR4nGNgGOqAEV3g2QKj/+hiUgnnMNQRC5jI1ThoLGChRLPNlhR4cB7xmYM1GMn2AbLh2PgwgDPy3HouYdUAA980JmGIYfPFwMfBrhI9nL6kaRwQC2geyQSDCFdkf2PAjGRsYDSSCYLRSCYIaB7JFBXXuAwdBSQBADHQNj/ZvWGqAAAAAElFTkSuQmCC";
         private static readonly string _ico_hextoggle = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEjSURBVEhL7VPBDcIwDOwALMACLMACTFA7j/7YgA1YgV26BFuwAE+ePEEXnaM4MqgIqITESZaSnO2znaTr/ngFwzAsVPWgqjfatuZSSjuejz6y60RkA05ETi1XgARwoNCKyVbg+r7vIS4ix0iA3B4xKaVly2cgGCJcm3PeG5A8EkBhqrpmAaVzB1acq6TAOEXAusXa4mq+gFVgjhvuS0eGBwJbO7O7wJhrH3PM1YM0x3aekQDHYg8jmxXpwMtFguyEizWuekG1rRmT1+ZLwUNJPBvaKnFhxqHCtoMpnAMF8nx5cVGSMoopnMNcAp8YUfwPmg5cVe2+xjPOoRawf/ANgXdGFAuo6rkN/oCda4H43b4Bl3MOgWvQ4lS7BGewq1P8WdwBW+BvFeT+kmoAAAAASUVORK5CYII=";
@@ -286,6 +288,7 @@ namespace nplus
         private ToolStripButton btnThemeToggle;
         private ToolStripButton btnLiveMonitor; // NEW
         private ToolStripButton btnJsonTree;
+        private ToolStripButton btnAiChat;
         private ToolStripButton btnHexToggle;
         private ToolStripButton btnPlayMacro;
         private ToolStripButton btnRecord;
@@ -367,7 +370,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 2.6p";
+            this.Text = "n+ - V 2.7g";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -531,6 +534,7 @@ namespace nplus
             aiMenu.DropDownItems.Add("Improve / Rewrite Selection", null, (s, e) => AiImproveSelection());
             aiMenu.DropDownItems.Add("Custom Prompt on Selection...", null, (s, e) => AiCustomPrompt());
             aiMenu.DropDownItems.Add("-");
+            aiMenu.DropDownItems.Add("Run Agent Task on Tab...", null, (s, e) => AiAgentTaskMenu());
             aiMenu.DropDownItems.Add("Show / Hide Chat Panel", null, (s, e) => ToggleChatPanel());
 
             var toolsMenu = new ToolStripMenuItem("Tools");
@@ -726,6 +730,14 @@ namespace nplus
             };
             btnJsonTree.Click += (s, e) => ToggleJsonPanel();
 
+            btnAiChat = new ToolStripButton()
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                Image = IconFromBase64(_ico_aichat),
+                ToolTipText = "Toggle AI Chat Panel"
+            };
+            btnAiChat.Click += (s, e) => ToggleChatPanel();
+
             btnHexToggle = new ToolStripButton()
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image,
@@ -779,7 +791,7 @@ namespace nplus
                 btnSave, btnSaveAll, btnRevert, new ToolStripSeparator(),
                 btnShowChars, btnIndentGuide, btnWordWrap, btnColSelect, new ToolStripSeparator(),
                 btnUndo, btnRecord, btnStopRecord, btnPlayMacro, new ToolStripSeparator(),
-                btnLiveMonitor, btnJsonTree, btnHexToggle, btnFindInFiles, new ToolStripSeparator(),
+                btnLiveMonitor, btnJsonTree, btnAiChat, btnHexToggle, btnFindInFiles, new ToolStripSeparator(),
                 btnThemeToggle, btnHelp
             });
 
@@ -889,8 +901,12 @@ namespace nplus
             _mainSplit.Panel1.Controls.Add(_jsonPanel);
 
             // --- AI CHAT PANEL (right of the editor, initially hidden) ---
-            _chatPanel = new AiChatPanel(() => _aiSettings, () => GetActiveEditor()?.Text ?? "");
-            _chatPanel.CloseRequested += (s, e) => { _aiSplit.Panel2Collapsed = true; };
+            _chatPanel = new AiChatPanel(() => _aiSettings, () => GetActiveEditor()?.Text ?? "", RunAgentTaskAsync);
+            _chatPanel.CloseRequested += (s, e) =>
+            {
+                _aiSplit.Panel2Collapsed = true;
+                if (btnAiChat != null) btnAiChat.Checked = false;
+            };
 
             _aiSplit = new SplitContainer
             {
@@ -2458,6 +2474,7 @@ namespace nplus
             {
                 _aiSplit.Panel2Collapsed = true;
             }
+            if (btnAiChat != null) btnAiChat.Checked = !_aiSplit.Panel2Collapsed;
         }
 
         // True only when AI is enabled and the active provider has what it needs.
@@ -2551,6 +2568,99 @@ namespace nplus
                 MessageBox.Show("AI request failed:\n" + ex.Message, "n+ AI",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private async void AiAgentTaskMenu()
+        {
+            var editor = GetActiveEditor();
+            if (editor == null) return;
+            string instruction = LuaInputBox.Show(
+                "Describe what the AI should do to this tab (it will preview changes before applying):",
+                "n+ AI — Agent Task", "");
+            if (string.IsNullOrWhiteSpace(instruction)) return;
+
+            string status = await RunAgentTaskAsync(instruction);
+            if (!string.IsNullOrEmpty(status))
+                MessageBox.Show(this, status, "n+ AI Agent", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// Asks the AI to act on the active tab via the Action Protocol, previews the
+        /// resulting diff, and applies it (as one undo step) only if the user confirms.
+        /// Returns a human-readable status string (also used by the chat panel).
+        /// </summary>
+        public async Task<string> RunAgentTaskAsync(string instruction)
+        {
+            if (_aiSettings == null || !_aiSettings.Enabled)
+                return "AI is off. Enable it in AI → Enable AI Assistant and set a provider in AI → Settings.";
+            var cfg = _aiSettings.For(_aiSettings.Provider);
+            if (AiDefaults.NeedsApiKey(_aiSettings.Provider) && string.IsNullOrWhiteSpace(cfg.ApiKey))
+                return "No API key set for " + AiDefaults.Display(_aiSettings.Provider) + " (AI → Settings).";
+
+            var editor = GetActiveEditor();
+            if (editor == null) return "No active editor tab.";
+
+            // Capture document + selection, converting Scintilla byte offsets to char indices.
+            string text = editor.Text ?? "";
+            byte[] bytes = Encoding.UTF8.GetBytes(text);
+            int selStart = ToCharIndex(bytes, editor.SelectionStart);
+            int selEnd = ToCharIndex(bytes, editor.SelectionEnd);
+            int caret = ToCharIndex(bytes, editor.CurrentPosition);
+            string selText = editor.SelectedText ?? "";
+            int lineCount = editor.Lines.Count;
+
+            string user =
+                "Active document (" + lineCount + " lines):\n" + text + "\n\n" +
+                (string.IsNullOrEmpty(selText) ? "No text is currently selected." : "Selected text:\n" + selText) +
+                "\n\nTask: " + instruction;
+            var messages = new List<AiMessage> { new AiMessage("user", user) };
+
+            string response;
+            UseWaitCursor = true;
+            try
+            {
+                response = await _aiClient.CompleteAsync(_aiSettings, messages, AiActionProtocol.SystemPrompt,
+                    System.Threading.CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                UseWaitCursor = false;
+                return "AI request failed: " + ex.Message;
+            }
+            UseWaitCursor = false;
+
+            if (!AiActionProtocol.TryParse(response, out string summary, out var actions, out string parseError))
+            {
+                // The model may have just answered in prose — surface that rather than an error.
+                return "AI did not return actions (" + parseError + ").\n\nResponse:\n" + response;
+            }
+
+            string newText = AiActionProtocol.Simulate(text, selStart, selEnd, caret, actions, out var notes);
+
+            // Message-only response (a question/answer with no edit).
+            if (newText == text)
+            {
+                if (notes.Count > 0) return string.Join("\n", notes);
+                return "No changes proposed" + (string.IsNullOrWhiteSpace(summary) ? "." : ": " + summary);
+            }
+
+            var diff = AiDiff.Build(text, newText);
+            using var dlg = new AiActionPreviewDialog(summary, diff, notes, _isDarkMode);
+            if (dlg.ShowDialog(this) != DialogResult.OK)
+                return "Cancelled — no changes made.";
+
+            editor.BeginUndoAction();
+            editor.Text = newText;
+            editor.EndUndoAction();
+            return "Applied" + (string.IsNullOrWhiteSpace(summary) ? "." : ": " + summary);
+        }
+
+        // Scintilla positions are UTF-8 byte offsets; convert to a C# string char index.
+        private static int ToCharIndex(byte[] utf8, int bytePos)
+        {
+            if (bytePos <= 0) return 0;
+            if (bytePos >= utf8.Length) return Encoding.UTF8.GetCharCount(utf8, 0, utf8.Length);
+            return Encoding.UTF8.GetCharCount(utf8, 0, bytePos);
         }
 
         public void RecordMacroStep(MacroStep step)
@@ -2837,7 +2947,7 @@ namespace nplus
             var editor = GetActiveEditor();
 
             editor.Text = @"========================================================================
-                 n+ - V 2.6p
+                 n+ - V 2.7g
                  USER'S GUIDE
 ========================================================================
 
