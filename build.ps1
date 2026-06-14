@@ -63,6 +63,11 @@ if ($LASTEXITCODE -ne 0) { throw "App publish failed." }
 $appExe = Join-Path $root "bin\$Configuration\net8.0-windows\$Rid\publish\nplus.exe"
 if (-not (Test-Path $appExe)) { throw "Expected app exe not found: $appExe" }
 
+# Read the app's version so the launcher can carry the exact same version info.
+$appVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($appExe).FileVersion
+if ([string]::IsNullOrWhiteSpace($appVersion)) { throw "Could not read app version from $appExe" }
+Write-Host "    App version: $appVersion (launcher will match)" -ForegroundColor DarkGray
+
 Write-Host "[2/4] Staging payload for the launcher..." -ForegroundColor Cyan
 $payloadDir = Join-Path $root "Bootstrap\payload"
 New-Item -ItemType Directory -Force -Path $payloadDir | Out-Null
@@ -70,7 +75,8 @@ Copy-Item $appExe (Join-Path $payloadDir "nplus.app.bin") -Force
 
 Write-Host "[3/4] Publishing Native AOT launcher (embeds payload)..." -ForegroundColor Cyan
 Enter-DevEnvironment
-dotnet publish "$root\Bootstrap\nplus.bootstrap.csproj" -c $Configuration -r $Rid
+dotnet publish "$root\Bootstrap\nplus.bootstrap.csproj" -c $Configuration -r $Rid `
+    "-p:Version=$appVersion" "-p:FileVersion=$appVersion" "-p:AssemblyVersion=$appVersion" "-p:InformationalVersion=$appVersion"
 if ($LASTEXITCODE -ne 0) { throw "Launcher publish failed." }
 
 $launcher = Join-Path $root "Bootstrap\bin\$Configuration\net8.0\$Rid\publish\nplus.exe"

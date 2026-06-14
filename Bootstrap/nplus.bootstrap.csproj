@@ -23,6 +23,19 @@
     <RootNamespace>nplus.Bootstrap</RootNamespace>
     <ApplicationIcon>..\nplus.ico</ApplicationIcon>
 
+    <!-- Carry the same product metadata as the embedded app (Properties\AssemblyInfo.cs).
+         The version numbers are supplied by build.ps1 (-p:Version=...), read from the
+         freshly-published app so the launcher's version always matches the app it wraps.
+         A direct 'dotnet build' (without build.ps1) falls back to this default. -->
+    <AssemblyTitle>nplus</AssemblyTitle>
+    <Product>nplus</Product>
+    <Copyright>Copyright &#169;  2026</Copyright>
+    <Version>2.7.7.0</Version>
+    <FileVersion>2.7.7.0</FileVersion>
+    <AssemblyVersion>2.7.7.0</AssemblyVersion>
+    <!-- Keep ProductVersion clean (no +<git-sha> suffix) so it matches the app exactly. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>

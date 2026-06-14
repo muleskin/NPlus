@@ -3186,6 +3186,70 @@ namespace nplus
      When a colored tab is not the active tab, its color is shown dimmed.
    - Color tags are remembered between sessions along with your open tabs.
 
+26. LUA SCRIPTING (Scripts Menu)
+   - n+ has a built-in Lua engine for programmable, document-aware
+     automation — loops, conditionals, regex, and variables that the
+     record/replay macro engine cannot express.
+   - 'Scripts -> Lua Script Console...' opens a REPL window. Type Lua on
+     top, press Ctrl+Enter to run, and see output below. Variables and
+     functions persist between runs in the console.
+   - 'Scripts -> Run Lua Script File...' executes a .lua file against the
+     active document.
+   - 'Scripts -> Open Scripts Folder' opens %AppData%\nplus\scripts, where
+     your scripts live. Four starter examples are placed there on first run.
+   - Each script runs as a single undo action, so Ctrl+Z reverts the whole
+     script at once.
+   - Two objects are available to every script:
+       * editor.*  - read/change the active document. Line numbers are
+         1-based. Examples: GetText / SetText / AppendText, GetSelectedText
+         / ReplaceSelection, GetLine / SetLine / GetLineCount / GotoLine,
+         caret and selection access, GetFileName / GetTitle.
+       * app.*     - MessageBox, Confirm, Prompt, NewTab, clipboard access,
+         and print(...) which is collected into the output.
+   - Example - uppercase the whole document:
+       editor.SetText(editor.GetText():upper())
+
+27. AI ASSISTANT (AI Menu) - OPTIONAL
+   - The AI assistant is OFF by default. Nothing runs until you turn it on
+     and configure a provider.
+   - 'AI -> Enable AI Assistant' is the master on/off switch.
+   - 'AI -> Settings...' chooses the provider and stores its key/model:
+       * OpenAI (ChatGPT), Azure OpenAI, Claude (Anthropic), Gemini
+         (Google), Ollama (local), or Perplexity.
+       * Each provider keeps its own key and model. Ollama is local and
+         needs no key. Azure needs a Resource URL + Deployment name.
+       * The 'Test Connection' button sends a tiny probe and reports
+         success or the exact error.
+       * Keys are stored locally in %AppData%\nplus\ai_settings.json and
+         are sent only to the provider you select.
+   - Selection actions (apply to the selection, or the whole document if
+     nothing is selected):
+       * 'Explain Selection'
+       * 'Improve / Rewrite Selection'
+       * 'Custom Prompt on Selection...'
+     Results open in an editable dialog with Replace Selection / Open in
+     New Tab / Copy.
+   - Chat panel:
+       * Toggle it with the chat-bubble icon on the toolbar, or
+         'AI -> Show / Hide Chat Panel'. It docks on the right; drag the
+         splitter to resize, or click the panel's X to close.
+       * Responses stream in token-by-token. Press Ctrl+Enter to send.
+       * Tick 'Attach current document as context' to include the active
+         document with your message.
+
+28. AI AGENT MODE (Action Protocol) - PREVIEW & CONFIRM
+   - The assistant can perform edits on the active tab, but only after you
+     review and confirm them.
+   - Start a task with 'AI -> Run Agent Task on Tab...', or tick the
+     'Agent mode' box in the chat panel and type your instruction.
+   - How it works: the AI returns a structured plan of edit actions
+     (replace document, replace selection, replace/delete lines, find &
+     replace, insert, and so on). n+ simulates the plan and shows a DIFF
+     PREVIEW of exactly what will change.
+   - Nothing is changed until you click 'Apply'. Clicking 'Cancel' leaves
+     the document untouched. An applied change is a single undo step.
+   - This works on every provider - it does not require native tool calling.
+
 ========================================================================";
 
             editor.ReadOnly = true;
