@@ -30,9 +30,9 @@
     <AssemblyTitle>nplus</AssemblyTitle>
     <Product>nplus</Product>
     <Copyright>Copyright &#169;  2026</Copyright>
-    <Version>2.7.7.0</Version>
-    <FileVersion>2.7.7.0</FileVersion>
-    <AssemblyVersion>2.7.7.0</AssemblyVersion>
+    <Version>2.8.22.0</Version>
+    <FileVersion>2.8.22.0</FileVersion>
+    <AssemblyVersion>2.8.22.0</AssemblyVersion>
     <!-- Keep ProductVersion clean (no +<git-sha> suffix) so it matches the app exactly. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 
