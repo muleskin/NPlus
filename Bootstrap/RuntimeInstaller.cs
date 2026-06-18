@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 
 namespace nplus.Bootstrap
 {
@@ -79,16 +81,30 @@ namespace nplus.Bootstrap
         /// <summary>Downloads the runtime installer and runs it (elevated). True on success.</summary>
         internal static bool DownloadAndInstall()
         {
-            string installer = Path.Combine(Path.GetTempPath(),
-                "nplus-windowsdesktop-runtime-8-x64.exe");
-
-            if (!DownloadFile(InstallerUrl, installer))
-            {
-                return false;
-            }
+            // Download into a fresh, randomly-named per-launch directory rather than a
+            // fixed %TEMP% filename — removes the predictable-path / pre-planted-file
+            // (symlink) angle on what we're about to execute elevated.
+            string tmpDir = Path.Combine(Path.GetTempPath(), "nplus-rt-" + Guid.NewGuid().ToString("N"));
+            string installer = Path.Combine(tmpDir, "windowsdesktop-runtime-8-x64.exe");
 
             try
             {
+                Directory.CreateDirectory(tmpDir);
+
+                if (!DownloadFile(InstallerUrl, installer))
+                {
+                    return false;
+                }
+
+                // HTTPS alone doesn't prove the bytes are Microsoft's. Before launching
+                // this elevated, require a valid Authenticode signature that chains to a
+                // trusted root AND is signed by Microsoft. A MITM, a poisoned cache, or a
+                // tampered download fails here instead of running as administrator.
+                if (!IsTrustedMicrosoftInstaller(installer))
+                {
+                    return false;
+                }
+
                 if (!RunInstaller(installer, InstallerArgs, elevate: true, out int code))
                 {
                     return false; // most commonly: user cancelled the UAC elevation prompt.
@@ -98,8 +114,133 @@ namespace nplus.Bootstrap
             }
             finally
             {
-                try { if (File.Exists(installer)) File.Delete(installer); } catch { }
+                try { if (Directory.Exists(tmpDir)) Directory.Delete(tmpDir, recursive: true); } catch { }
             }
+        }
+
+        /// <summary>
+        /// True only if <paramref name="path"/> carries a valid Authenticode signature
+        /// that chains to a trusted root AND whose signer is Microsoft. Both checks are
+        /// required: WinVerifyTrust alone would accept any trusted publisher, and the
+        /// signer-name check alone wouldn't prove the signature is valid/untampered.
+        /// </summary>
+        internal static bool IsTrustedMicrosoftInstaller(string path)
+        {
+            return HasValidTrustedSignature(path) && IsSignedByMicrosoft(path);
+        }
+
+        private static bool IsSignedByMicrosoft(string path)
+        {
+            try
+            {
+                using var cert = new X509Certificate2(X509Certificate.CreateFromSignedFile(path));
+                // Distinguished name of Microsoft's code-signing certs, e.g.
+                // "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, ...".
+                string subject = cert.Subject ?? string.Empty;
+                return subject.IndexOf("O=Microsoft Corporation", StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+            catch
+            {
+                return false; // unsigned, or signature container unreadable
+            }
+        }
+
+        // --- Authenticode validation via WinVerifyTrust ------------------------------
+
+        private static readonly Guid WINTRUST_ACTION_GENERIC_VERIFY_V2 =
+            new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
+
+        private const uint WTD_UI_NONE = 2;
+        private const uint WTD_REVOKE_NONE = 0;
+        private const uint WTD_CHOICE_FILE = 1;
+        private const uint WTD_STATEACTION_VERIFY = 1;
+        private const uint WTD_STATEACTION_CLOSE = 2;
+
+        private static bool HasValidTrustedSignature(string path)
+        {
+            var fileInfo = new WINTRUST_FILE_INFO
+            {
+                cbStruct = (uint)Marshal.SizeOf<WINTRUST_FILE_INFO>(),
+                pcwszFilePath = path,
+                hFile = IntPtr.Zero,
+                pgKnownSubject = IntPtr.Zero,
+            };
+
+            IntPtr pFile = Marshal.AllocHGlobal(Marshal.SizeOf<WINTRUST_FILE_INFO>());
+            try
+            {
+                Marshal.StructureToPtr(fileInfo, pFile, false);
+
+                var data = new WINTRUST_DATA
+                {
+                    cbStruct = (uint)Marshal.SizeOf<WINTRUST_DATA>(),
+                    pPolicyCallbackData = IntPtr.Zero,
+                    pSIPClientData = IntPtr.Zero,
+                    dwUIChoice = WTD_UI_NONE,
+                    fdwRevocationChecks = WTD_REVOKE_NONE,
+                    dwUnionChoice = WTD_CHOICE_FILE,
+                    pFile = pFile,
+                    dwStateAction = WTD_STATEACTION_VERIFY,
+                    hWVTStateData = IntPtr.Zero,
+                    pwszURLReference = IntPtr.Zero,
+                    dwProvFlags = 0,
+                    dwUIContext = 0,
+                    pSignatureSettings = IntPtr.Zero,
+                };
+
+                Guid action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+                int result;
+                try
+                {
+                    result = WinVerifyTrust(IntPtr.Zero, ref action, ref data);
+                }
+                finally
+                {
+                    // Always release the trust-provider state, regardless of the verdict.
+                    data.dwStateAction = WTD_STATEACTION_CLOSE;
+                    WinVerifyTrust(IntPtr.Zero, ref action, ref data);
+                }
+
+                return result == 0; // S_OK => signature present, valid, and trusted.
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(pFile);
+            }
+        }
+
+        [DllImport("wintrust.dll", ExactSpelling = true, CharSet = CharSet.Unicode, SetLastError = false)]
+        private static extern int WinVerifyTrust(IntPtr hwnd, ref Guid pgActionID, ref WINTRUST_DATA pWVTData);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WINTRUST_FILE_INFO
+        {
+            public uint cbStruct;
+            [MarshalAs(UnmanagedType.LPWStr)] public string pcwszFilePath;
+            public IntPtr hFile;
+            public IntPtr pgKnownSubject;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WINTRUST_DATA
+        {
+            public uint cbStruct;
+            public IntPtr pPolicyCallbackData;
+            public IntPtr pSIPClientData;
+            public uint dwUIChoice;
+            public uint fdwRevocationChecks;
+            public uint dwUnionChoice;
+            public IntPtr pFile;
+            public uint dwStateAction;
+            public IntPtr hWVTStateData;
+            public IntPtr pwszURLReference;
+            public uint dwProvFlags;
+            public uint dwUIContext;
+            public IntPtr pSignatureSettings;
         }
 
         /// <summary>

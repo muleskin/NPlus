@@ -46,7 +46,12 @@ namespace nplus
                 _typesRegistered = true;
             }
 
-            _script = new Script(CoreModules.Preset_Default);
+            // Preset_SoftSandbox deliberately EXCLUDES the OS_System and IO modules,
+            // so scripts cannot call os.execute (spawn processes), os.remove/os.rename,
+            // or io.* (read/write arbitrary files). Without this, running an untrusted
+            // .lua file would be a one-click arbitrary-code-execution hole. String,
+            // table, math, os.time/date, and coroutine remain available for text work.
+            _script = new Script(CoreModules.Preset_SoftSandbox);
             _script.Globals["editor"] = new LuaEditorApi(_form);
             _script.Globals["app"] = new LuaAppApi(_form, _output);
 

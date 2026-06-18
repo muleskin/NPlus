@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
@@ -613,6 +614,10 @@ namespace nplus
                 // Deduplicate
                 var fileSet = new HashSet<string>(allFiles, StringComparer.OrdinalIgnoreCase);
 
+                // Replacements are staged here and only written after the user confirms,
+                // so a cancel leaves every file untouched (no partial run).
+                var pending = new List<(string Path, string Content, Encoding Encoding)>();
+
                 foreach (string filePath in fileSet)
                 {
                     // Skip hidden folders if unchecked
@@ -624,7 +629,12 @@ namespace nplus
 
                     try
                     {
-                        string content = File.ReadAllText(filePath);
+                        // Skip files that look binary, and read text in its own encoding
+                        // (BOM-detected) so a replace round-trips without corrupting bytes
+                        // or silently re-encoding the file.
+                        if (!TryReadTextFile(filePath, out string content, out Encoding encoding))
+                            continue;
+
                         string[] lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
                         bool fileHasMatch = false;
                         filesSearched++;
@@ -656,11 +666,29 @@ namespace nplus
                                 newContent = content.Replace(searchText, replaceText ?? "");
                             else
                                 newContent = Regex.Replace(content, Regex.Escape(searchText), replaceText ?? "", RegexOptions.IgnoreCase);
-                            File.WriteAllText(filePath, newContent);
-                            filesReplaced++;
+                            pending.Add((filePath, newContent, encoding));
                         }
                     }
                     catch { /* Skip locked/inaccessible files */ }
+                }
+
+                // Bulk replace edits files on disk with no undo — gate it behind an
+                // explicit confirmation that names the blast radius, then write.
+                if (replaceMode && pending.Count > 0)
+                {
+                    var confirm = MessageBox.Show(
+                        $"Replace {totalMatches} match{(totalMatches != 1 ? "es" : "")} in {pending.Count} file{(pending.Count != 1 ? "s" : "")} under:\n\n{directory}\n\n" +
+                        "This modifies the files on disk and cannot be undone. Continue?",
+                        "Confirm Replace in Files", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                    if (confirm == DialogResult.Yes)
+                    {
+                        foreach (var item in pending)
+                        {
+                            try { File.WriteAllText(item.Path, item.Content, item.Encoding); filesReplaced++; }
+                            catch { /* skip files that became locked/read-only */ }
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -683,6 +711,55 @@ namespace nplus
                 lblStatus.ForeColor = totalMatches > 0 ? Color.DarkSlateGray : Color.IndianRed;
                 lblStatus.Text = $"{totalMatches} hit{(totalMatches != 1 ? "s" : "")} in {filesMatched} file{(filesMatched != 1 ? "s" : "")} ({filesSearched} searched).";
             }
+        }
+
+        // Reads a file as text for Find/Replace in Files. Returns false (and skips the
+        // file) when it looks binary, so a wildcard like *.* never garbles or rewrites
+        // non-text files. The detected encoding is returned so a replace can be written
+        // back in the file's own encoding (BOM preserved) rather than forced to UTF-8.
+        private static bool TryReadTextFile(string path, out string content, out Encoding encoding)
+        {
+            content = null;
+            encoding = null;
+
+            byte[] bytes;
+            try { bytes = File.ReadAllBytes(path); }
+            catch { return false; }
+
+            // A NUL byte in the first 8 KB is the classic "this isn't text" signal.
+            int scan = Math.Min(bytes.Length, 8192);
+            for (int i = 0; i < scan; i++)
+                if (bytes[i] == 0) return false;
+
+            int bomLen;
+            encoding = DetectEncoding(bytes, out bomLen);
+            try { content = encoding.GetString(bytes, bomLen, bytes.Length - bomLen); }
+            catch { return false; }
+            return true;
+        }
+
+        // Picks the write-back encoding from a leading BOM, defaulting to UTF-8 without
+        // a BOM. The returned encoding re-emits the same BOM (or none) on write, so the
+        // file round-trips byte-for-byte apart from the replaced text.
+        private static Encoding DetectEncoding(byte[] bytes, out int bomLen)
+        {
+            if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+            {
+                bomLen = 3;
+                return new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
+            }
+            if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+            {
+                bomLen = 2;
+                return new UnicodeEncoding(bigEndian: false, byteOrderMark: true);
+            }
+            if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+            {
+                bomLen = 2;
+                return new UnicodeEncoding(bigEndian: true, byteOrderMark: true);
+            }
+            bomLen = 0;
+            return new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
         }
 
         private void AddToHistory(List<string> history, ComboBox combo)

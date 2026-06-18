@@ -94,14 +94,20 @@ namespace nplus.Bootstrap
                 payload = ms.ToArray();
             }
 
-            string tag = Convert.ToHexString(SHA256.HashData(payload)).Substring(0, 16);
+            byte[] payloadHash = SHA256.HashData(payload);
+            string tag = Convert.ToHexString(payloadHash).Substring(0, 16);
             string dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "nplus", "app", tag);
             Directory.CreateDirectory(dir);
 
+            // Reuse the cached exe only when its bytes hash to exactly the embedded
+            // payload. The folder name is content-addressed, but the file inside it
+            // lives in a per-user-writable directory — a length-only check would let a
+            // same-user attacker drop a matching-size malicious nplus.exe here that we'd
+            // then launch. Verifying the full hash makes that substitution fail closed.
             string exe = Path.Combine(dir, "nplus.exe");
-            if (!File.Exists(exe) || new FileInfo(exe).Length != payload.Length)
+            if (!File.Exists(exe) || !FileMatchesHash(exe, payloadHash))
             {
                 try
                 {
@@ -110,12 +116,31 @@ namespace nplus.Bootstrap
                 catch (IOException)
                 {
                     // A concurrent launch may already be writing/running it; tolerate
-                    // as long as the file ended up present.
-                    if (!File.Exists(exe)) throw;
+                    // that only if what landed on disk is the genuine payload.
+                    if (!File.Exists(exe) || !FileMatchesHash(exe, payloadHash)) throw;
                 }
             }
 
             return exe;
+        }
+
+        // True if the file at <paramref name="path"/> hashes (SHA-256) to expectedHash.
+        private static bool FileMatchesHash(string path, byte[] expectedHash)
+        {
+            try
+            {
+                byte[] got;
+                using (FileStream fs = new FileStream(
+                    path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    got = SHA256.HashData(fs);
+                }
+                return CryptographicOperations.FixedTimeEquals(expectedHash, got);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static void LaunchApp(string exe, string[] args)

@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Windows.Forms;
 
 namespace nplus
@@ -93,16 +94,27 @@ namespace nplus
 
         private static void ExtractIfNeeded(Assembly asm, string resourceName, string destPath)
         {
-            using Stream src = asm.GetManifestResourceStream(resourceName);
-            if (src == null)
+            byte[] expected;
+            using (Stream src = asm.GetManifestResourceStream(resourceName))
             {
-                throw new InvalidOperationException(
-                    "Embedded native resource not found: " + resourceName);
+                if (src == null)
+                {
+                    throw new InvalidOperationException(
+                        "Embedded native resource not found: " + resourceName);
+                }
+
+                using var ms = new MemoryStream();
+                src.CopyTo(ms);
+                expected = ms.ToArray();
             }
 
-            // Skip rewriting if an identically sized copy is already present (fast path,
-            // and avoids clobbering a DLL another nplus instance may have mapped).
-            if (File.Exists(destPath) && new FileInfo(destPath).Length == src.Length)
+            // Skip rewriting only when the on-disk copy is byte-for-byte the embedded
+            // one. A length-only check would let a same-user attacker swap in a
+            // matching-size malicious Scintilla.dll/Lexilla.dll that we'd then load via
+            // LoadLibrary. Verifying the full hash makes the cached DLL exactly the one
+            // we shipped, and still skips the write (and the clobber of an instance that
+            // has it mapped) on the fast path.
+            if (File.Exists(destPath) && FileMatchesHash(destPath, expected))
             {
                 return;
             }
@@ -111,13 +123,34 @@ namespace nplus
             {
                 using FileStream dst = new FileStream(
                     destPath, FileMode.Create, FileAccess.Write, FileShare.Read);
-                src.CopyTo(dst);
+                dst.Write(expected, 0, expected.Length);
             }
             catch (IOException)
             {
-                // Another instance already extracted / has it loaded — fine as long as
-                // the file exists. Re-throw only if it's genuinely missing.
-                if (!File.Exists(destPath)) throw;
+                // Another instance already extracted / has it loaded. Tolerate that only
+                // if what's on disk is the genuine DLL; otherwise surface the failure
+                // rather than load a file we couldn't validate or replace.
+                if (!File.Exists(destPath) || !FileMatchesHash(destPath, expected)) throw;
+            }
+        }
+
+        // True if the file's SHA-256 equals the hash of <paramref name="expected"/>.
+        private static bool FileMatchesHash(string path, byte[] expected)
+        {
+            try
+            {
+                byte[] want = SHA256.HashData(expected);
+                byte[] got;
+                using (FileStream fs = new FileStream(
+                    path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    got = SHA256.HashData(fs);
+                }
+                return CryptographicOperations.FixedTimeEquals(want, got);
+            }
+            catch
+            {
+                return false;
             }
         }
     }

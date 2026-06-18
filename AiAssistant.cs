@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -82,7 +83,7 @@ namespace nplus
                 if (System.IO.File.Exists(path))
                 {
                     var s = JsonSerializer.Deserialize<AiSettings>(System.IO.File.ReadAllText(path));
-                    if (s != null) return s;
+                    if (s != null) { s.DecryptKeys(); return s; }
                 }
             }
             catch { /* corrupt/old file — fall through to defaults */ }
@@ -93,16 +94,87 @@ namespace nplus
         {
             try
             {
+                // Persist a copy with the API keys DPAPI-encrypted, so they never hit
+                // disk in cleartext. The live object keeps its plaintext keys for use
+                // at request time.
+                AiSettings toSave = Clone();
+                toSave.EncryptKeys();
                 System.IO.File.WriteAllText(path,
-                    JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+                    JsonSerializer.Serialize(toSave, new JsonSerializerOptions { WriteIndented = true }));
             }
             catch { /* best-effort; never block the UI on a settings write */ }
+        }
+
+        /// <summary>Encrypts every provider's key in place (called on a save-only copy).</summary>
+        private void EncryptKeys()
+        {
+            if (Providers == null) return;
+            foreach (AiProviderConfig cfg in Providers.Values)
+                if (cfg != null) cfg.ApiKey = AiSecret.Protect(cfg.ApiKey);
+        }
+
+        /// <summary>
+        /// Decrypts every provider's key in place (called right after load). Keys saved
+        /// in cleartext by an older build carry no marker and are passed through as-is,
+        /// then re-saved encrypted on the next write.
+        /// </summary>
+        private void DecryptKeys()
+        {
+            if (Providers == null) return;
+            foreach (AiProviderConfig cfg in Providers.Values)
+                if (cfg != null) cfg.ApiKey = AiSecret.Unprotect(cfg.ApiKey);
         }
 
         /// <summary>Deep copy via JSON round-trip — used so the settings dialog edits a working copy.</summary>
         public AiSettings Clone()
         {
             return JsonSerializer.Deserialize<AiSettings>(JsonSerializer.Serialize(this)) ?? new AiSettings();
+        }
+    }
+
+    /// <summary>
+    /// Encrypts/decrypts AI API keys for at-rest storage using Windows DPAPI
+    /// (CurrentUser scope) — the ciphertext can only be read back by the same Windows
+    /// user on the same machine. Encrypted values are tagged with a marker prefix so a
+    /// legacy cleartext key (no marker) is recognised and transparently migrated.
+    /// </summary>
+    internal static class AiSecret
+    {
+        private const string Marker = "dpapi:";
+
+        public static string Protect(string plain)
+        {
+            if (string.IsNullOrEmpty(plain)) return plain ?? "";
+            try
+            {
+                byte[] enc = ProtectedData.Protect(
+                    Encoding.UTF8.GetBytes(plain), null, DataProtectionScope.CurrentUser);
+                return Marker + Convert.ToBase64String(enc);
+            }
+            catch
+            {
+                // DPAPI unavailable for some reason — persisting the key (as before)
+                // beats silently dropping it and breaking the user's configured provider.
+                return plain;
+            }
+        }
+
+        public static string Unprotect(string stored)
+        {
+            if (string.IsNullOrEmpty(stored)) return stored ?? "";
+            if (!stored.StartsWith(Marker, StringComparison.Ordinal))
+                return stored;   // legacy cleartext; re-saved encrypted on next write
+            try
+            {
+                byte[] enc = Convert.FromBase64String(stored.Substring(Marker.Length));
+                byte[] plain = ProtectedData.Unprotect(enc, null, DataProtectionScope.CurrentUser);
+                return Encoding.UTF8.GetString(plain);
+            }
+            catch
+            {
+                // Corrupt, tampered, or encrypted by a different user/machine.
+                return "";
+            }
         }
     }
 

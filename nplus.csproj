@@ -66,6 +66,10 @@
     <!-- Pure-managed Lua interpreter for the scripting engine. No native deps, so it
          folds into the single-file publish with no changes to NativeBootstrap. -->
     <PackageReference Include="MoonSharp" Version="2.0.0" />
+    <!-- DPAPI (CryptProtectData) wrapper used to encrypt the stored AI API keys at
+         rest. Managed assembly that P/Invokes the in-box crypt32.dll, so it folds
+         into the single-file publish with no native asset handling. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 
   <!-- Embed the native Scintilla/Lexilla DLLs into the exe. NativeBootstrap
