@@ -42,18 +42,31 @@ namespace nplus
             switch (ActionType)
             {
                 case MacroActionType.InsertText:
-                    editor.InsertText(editor.CurrentPosition, Data ?? "");
-                    editor.GotoPosition(editor.CurrentPosition + (Data?.Length ?? 0));
+                    // ReplaceSelection inserts at the caret when nothing is selected, or
+                    // overwrites the selection when there is one (like typing over selected
+                    // text), and leaves the caret after the inserted text.
+                    editor.ReplaceSelection(Data ?? "");
                     break;
                 case MacroActionType.NewLine:
-                    editor.InsertText(editor.CurrentPosition, System.Environment.NewLine);
-                    editor.GotoPosition(editor.CurrentPosition + System.Environment.NewLine.Length);
+                    // Same selection-aware behavior as typing: Enter over a selection
+                    // replaces it with the newline.
+                    editor.ReplaceSelection(System.Environment.NewLine);
                     break;
                 case MacroActionType.Backspace:
-                    if (editor.CurrentPosition > 0) editor.DeleteRange(editor.CurrentPosition - 1, 1);
+                    // Honor an active selection (e.g. after Shift+Home), exactly like the
+                    // real Backspace key; only fall back to deleting one char to the left.
+                    if (editor.SelectionStart != editor.SelectionEnd)
+                        editor.ReplaceSelection("");
+                    else if (editor.CurrentPosition > 0)
+                        editor.DeleteRange(editor.CurrentPosition - 1, 1);
                     break;
                 case MacroActionType.Delete:
-                    if (editor.CurrentPosition < editor.TextLength) editor.DeleteRange(editor.CurrentPosition, 1);
+                    // Honor an active selection (e.g. after Shift+End), exactly like the
+                    // real Delete key; only fall back to deleting one char to the right.
+                    if (editor.SelectionStart != editor.SelectionEnd)
+                        editor.ReplaceSelection("");
+                    else if (editor.CurrentPosition < editor.TextLength)
+                        editor.DeleteRange(editor.CurrentPosition, 1);
                     break;
                 case MacroActionType.KeyCommand:
                     editor.ExecuteCmd((Command)CommandId);
