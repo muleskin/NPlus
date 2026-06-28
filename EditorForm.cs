@@ -2061,8 +2061,16 @@ namespace nplus
 
         // Soft size caps. Above these we ask the user before allocating the full
         // file into memory; a multi-GB log would otherwise OOM the process.
-        private const long LargeTextFileWarnBytes = 100L * 1024 * 1024;     // 100 MB
+        private const long LargeTextFileWarnBytes = 512L * 1024 * 1024;     // 512 MB
         private const long LargeBinaryFileWarnBytes = 256L * 1024 * 1024;   // 256 MB
+
+        // At/above this size a text file opens in "large-file mode": streamed in chunks
+        // (instead of one giant string) and with the per-character features that don't
+        // scale (syntax highlighting, folding, word wrap, whitespace/EOL view, indent
+        // guides) turned OFF so the file stays responsive.
+        private const long LargeFileModeBytes = 20L * 1024 * 1024;          // 20 MB
+        private const int SCI_ALLOCATE = 2446;                             // pre-allocate doc memory
+        private readonly HashSet<TabPage> _largeFileTabs = new HashSet<TabPage>();
 
         private void LoadFileIntoEditor(Scintilla editor, TabPage page, string path)
         {
@@ -2105,28 +2113,38 @@ namespace nplus
 
             {
                 bool openedReadOnly = false;
-                string text;
-                Encoding detectedEncoding;
+                Encoding detectedEncoding = DetectFileEncoding(path);
+                bool largeFile = size >= LargeFileModeBytes;
 
-                try
+                if (largeFile)
                 {
-                    detectedEncoding = DetectFileEncoding(path);
-                    text = File.ReadAllText(path, detectedEncoding);
+                    // Strip the heavy features and stream the bytes in so we never build a
+                    // full-file string or pay for lexing/folding on a huge document.
+                    _largeFileTabs.Add(page);
+                    ApplyLargeFileMode(editor);
+                    openedReadOnly = !LoadTextStreamed(editor, path, detectedEncoding, size);
                 }
-                catch (IOException)
+                else
                 {
-                    // File is locked by another process — read via shared access, open as read-only
-                    openedReadOnly = true;
-                    detectedEncoding = DetectFileEncoding(path);
-                    using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-                    using (var sr = new StreamReader(fs, detectedEncoding))
+                    _largeFileTabs.Remove(page);
+                    string text;
+                    try
                     {
-                        text = sr.ReadToEnd();
+                        text = File.ReadAllText(path, detectedEncoding);
                     }
+                    catch (IOException)
+                    {
+                        // File is locked by another process — read via shared access, open as read-only
+                        openedReadOnly = true;
+                        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                        using (var sr = new StreamReader(fs, detectedEncoding))
+                        {
+                            text = sr.ReadToEnd();
+                        }
+                    }
+                    editor.ReadOnly = false;
+                    editor.Text = text;
                 }
-
-                editor.ReadOnly = false;
-                editor.Text = text;
 
                 if (openedReadOnly)
                 {
@@ -2146,6 +2164,52 @@ namespace nplus
 
             // Start watching for external changes to this file
             StartFileChangeWatch(page, path);
+        }
+
+        // Turns off the per-character features that don't scale to very large documents.
+        // Re-applied on theme change via ApplySyntaxHighlighting so large-file tabs stay lean.
+        private void ApplyLargeFileMode(Scintilla editor)
+        {
+            editor.LexerName = "null";            // no syntax highlighting
+            editor.WrapMode = WrapMode.None;
+            editor.ViewWhitespace = WhitespaceMode.Invisible;
+            editor.ViewEol = false;
+            editor.IndentationGuides = IndentView.None;
+            editor.SetProperty("fold", "0");
+            editor.Margins[2].Width = 0;          // hide the fold margin
+        }
+
+        // Streams a (large) text file into Scintilla in chunks rather than building one
+        // giant string + copying it into the control. Pre-allocates the document buffer to
+        // avoid repeated reallocations. Returns false if the file was locked and had to be
+        // opened shared (caller marks the tab read-only).
+        private bool LoadTextStreamed(Scintilla editor, string path, Encoding enc, long size)
+        {
+            editor.ReadOnly = false;
+            editor.ClearAll();
+            try { editor.DirectMessage(SCI_ALLOCATE, new IntPtr(size + 1024), IntPtr.Zero); } catch { }
+
+            bool normal = true;
+            FileStream fs;
+            try
+            {
+                fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            }
+            catch (IOException)
+            {
+                normal = false; // locked by another process — read shared, open read-only
+                fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            }
+
+            using (fs)
+            using (var sr = new StreamReader(fs, enc, detectEncodingFromByteOrderMarks: true, bufferSize: 1 << 20))
+            {
+                char[] buffer = new char[1 << 20]; // ~1M chars per chunk
+                int read;
+                while ((read = sr.Read(buffer, 0, buffer.Length)) > 0)
+                    editor.AppendText(new string(buffer, 0, read));
+            }
+            return normal;
         }
 
         private void LoadBinaryFileIntoTab(TabPage page, string path)
@@ -4636,7 +4700,10 @@ namespace nplus
             int col = editor.GetColumn(pos);
 
             // Using :N0 formats the integer with commas (e.g., 1,234,567)
-            lblLength.Text = $"Length: {editor.TextLength:N0}";
+            string lengthText = $"Length: {editor.TextLength:N0}";
+            if (tcDocuments.SelectedTab != null && _largeFileTabs.Contains(tcDocuments.SelectedTab))
+                lengthText += "   [Large File — syntax off]";
+            lblLength.Text = lengthText;
 
             // Add 1 to line and col because Scintilla indexes from 0, but humans read from 1
             lblPosition.Text = $"Ln: {line + 1:N0}  Col: {col + 1:N0}  Pos: {pos:N0}";
@@ -5037,6 +5104,7 @@ namespace nplus
 
             // Clean up encoding tracking
             _tabEncodings.Remove(page);
+            _largeFileTabs.Remove(page);
 
             // Dispose any HexBox byte provider on this tab to release native handles
             if (page.Controls.Count > 0 && page.Controls[0] is HexBox hex && hex.ByteProvider is IDisposable disposableProvider)
@@ -5480,6 +5548,11 @@ namespace nplus
             }
 
             ConfigureFolding(editor);
+
+            // A theme toggle re-runs this for every tab; keep large-file tabs lean
+            // (re-disable the lexer/folding/wrap that the block above just set up).
+            if (editor.Parent is TabPage lfPage && _largeFileTabs.Contains(lfPage))
+                ApplyLargeFileMode(editor);
         }
 
         // Sets up the fold margin, fold-point markers, and theme-aware colors.
