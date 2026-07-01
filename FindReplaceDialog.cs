@@ -19,6 +19,7 @@ namespace nplus
         private CheckBox chkBookmarkLine, chkPurgeMarks;
         private RadioButton radNormal, radExtended, radRegex;
         private Button btnFindNext, btnCount, btnReplace, btnReplaceAll, btnClose;
+        private Button btnFindAllTabs;
         private Button btnMarkAll, btnClearMarks, btnCopyMarked;
         private Label lblStatus;
 
@@ -397,6 +398,14 @@ namespace nplus
             btnReplace = new Button { Text = "Replace", Location = new Point(400, 75), Width = 130 };
             btnReplaceAll = new Button { Text = "Replace All", Location = new Point(400, 105), Width = 130 };
 
+            btnFindAllTabs = new Button { Text = "Find All in Open Tabs", Location = new Point(400, 75), Width = 130 };
+            btnFindAllTabs.Click += (s, e) =>
+            {
+                if (string.IsNullOrEmpty(txtFind.Text)) return;
+                AddToHistory(_findHistory, txtFind);
+                _mainForm.FindAllInOpenTabs(txtFind.Text, chkMatchCase.Checked, chkWholeWord.Checked, radRegex.Checked, radExtended.Checked);
+            };
+
             btnMarkAll = new Button { Text = "Mark All", Location = new Point(400, 15), Width = 130 };
             btnClearMarks = new Button { Text = "Clear all marks", Location = new Point(400, 45), Width = 130 };
             btnCopyMarked = new Button { Text = "Copy Marked Text", Location = new Point(400, 75), Width = 130 };
@@ -427,7 +436,7 @@ namespace nplus
                 chkBackward, chkMatchCase, chkWholeWord, chkWrap,
                 chkBookmarkLine, chkPurgeMarks,
                 grpMode,
-                btnFindNext, btnCount, btnReplace, btnReplaceAll,
+                btnFindNext, btnCount, btnReplace, btnReplaceAll, btnFindAllTabs,
                 btnMarkAll, btnClearMarks, btnCopyMarked,
                 btnClose
             });
@@ -510,6 +519,7 @@ namespace nplus
 
                 btnFindNext.Visible = !isMark && idx != 2;
                 btnCount.Visible = isFind;
+                btnFindAllTabs.Visible = isFind;
 
                 chkBookmarkLine.Visible = isMark;
                 chkPurgeMarks.Visible = isMark;

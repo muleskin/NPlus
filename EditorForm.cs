@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -179,6 +180,7 @@ namespace nplus
         private static readonly string _ico_undo = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAgklEQVR4nGNgGAXDHjCSotit59J/dLFdJXp4zSDKAmwGE2sRQQuQDcdmCCF5goYT43pS1ZKnAYceJlIMoBogx/W49NLcB0RbQK6PiLKAXMOJsoASw3FaAMsw5CRTZP04LcBlMCELseVkvFmbnMINHeCNg10leowkly+UAEojfBRgBQBjT0+i6V2m8wAAAABJRU5ErkJggg==";
         private static readonly string _ico_playmacro = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAeElEQVR4nO3Vuw2AMAwE0ANlLEZgDMZiDEbIXlBZsiKQ/xJFrnRxT5cmwMyvs13HHe1YNUgEEgEOlQKEWCETwKFSgBAN5Aa0UBjgUClAyAi1TKDv5zLe0ha8lQMJC76Kw4BUTHE9kbYcMC6wFFPUCzzlYjL+gxkxDy27Lr81Sif2AAAAAElFTkSuQmCC";
         private static readonly string _ico_aichat = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAErSURBVEhL3ZShUgMxGIQrkUgkEomkl71bgkKjUAwSWYmsQ4LjMcDxCJU8QiWyEgmzw19Iwv2dS3sYdmZnLtnrt80lk8nkX2o65VEIPK110/C4ZGUieQjEBRA/tnUI8U1lJVvwPSC+2ouLEOJ8Cz9ZyYrkQVag5Vn4kgWVAs7uxGlbXmeBJqxgngWVcjluUCmX4wXaMO3P0LHH6Q1+5ng7ZOxx3IDkvsY6vkPGHmdzUCmX4waVcjluUCmXA/BcARAfs6BSTcMb2/hZFtiGvX+ZMx2/rusu7Nlxd5VedgAvgbhUQe/Fp+WpwFay0W37ey7xfcn+lo6cvp8MxOeeH8srID6s38vNk5Lpar1hxT9epud+J6UFo8OlomBcuJQUjA+XrOBv4JJdxTvBPwFqbyZgt571uwAAAABJRU5ErkJggg==";
+        private static readonly string _ico_multiline = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABjSURBVEhLY2AYBYMG2No6X7OxcfyPjkHi5MqhWAASrKion4aOYRrQxYmRG7WAoBzdLfgI04CGQeJkyaFYMPQBvgxDrhyKBSBB9IgiJiLxyY1aQFCO7hbgzDDkyqFYMAoGDAAAN/kkKdGo0p4AAAAASUVORK5CYII=";
         private static readonly string _ico_livemonitor = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAj0lEQVR4nGNgGAX0BncC3P7fCXD7D+MzUdtwdDYjLQxHBiz4NNlsSYFrOuIzhyzHUC2IVDbswnCAyoZdjFSNA2RLsFmIAmy2pPyHBRFyUJEK8MYBuoXIfGLjhKpBRLIF2FwJEyM22LBaQEgzKUkWHgfkRCQxDiEqDsjNZCQB5GRLCiDKB5TkA5on01EwAgAAJMg6MJ2h2xEAAAAASUVORK5CYII=";
         private static readonly string _ico_jsontree = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAe0lEQVR4nGNgGOqAEV3g2QKj/+hiUgnnMNQRC5jI1ThoLGChRLPNlhR4cB7xmYM1GMn2AbLh2PgwgDPy3HouYdUAA980JmGIYfPFwMfBrhI9nL6kaRwQC2geyQSDCFdkf2PAjGRsYDSSCYLRSCYIaB7JFBXXuAwdBSQBADHQNj/ZvWGqAAAAAElFTkSuQmCC";
         private static readonly string _ico_hextoggle = "iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEjSURBVEhL7VPBDcIwDOwALMACLMACTFA7j/7YgA1YgV26BFuwAE+ePEEXnaM4MqgIqITESZaSnO2znaTr/ngFwzAsVPWgqjfatuZSSjuejz6y60RkA05ETi1XgARwoNCKyVbg+r7vIS4ix0iA3B4xKaVly2cgGCJcm3PeG5A8EkBhqrpmAaVzB1acq6TAOEXAusXa4mq+gFVgjhvuS0eGBwJbO7O7wJhrH3PM1YM0x3aekQDHYg8jmxXpwMtFguyEizWuekG1rRmT1+ZLwUNJPBvaKnFhxqHCtoMpnAMF8nx5cVGSMoopnMNcAp8YUfwPmg5cVe2+xjPOoRawf/ANgXdGFAuo6rkN/oCda4H43b4Bl3MOgWvQ4lS7BGewq1P8WdwBW+BvFeT+kmoAAAAASUVORK5CYII=";
@@ -259,9 +261,15 @@ namespace nplus
         private bool _showCharacters = false;
         private bool _showIndentGuides = false;
         private bool _foldingEnabled = true;
+        private bool _multiLineTabs = false;
         private bool _restoreMaximized = false;
         private bool _checkForUpdatesOnStartup = true;
         private ToolStripMenuItem _foldViewMenuItem;
+        private ToolStripMenuItem _multiLineTabsMenuItem;
+        private ToolStripButton btnMultiLineTabs;
+
+        // The tab to re-select / focus on startup (restored from the session).
+        private int _startupActiveIndex = -1;
 
         // GitHub repository used by the update checker.
         private const string UpdateGitHubOwner = "muleskin";
@@ -379,6 +387,10 @@ namespace nplus
             {
                 if (_checkForUpdatesOnStartup) CheckForUpdates(manual: false);
             };
+
+            // Put the caret in the restored active tab so the user can type immediately.
+            // Runs after files-to-open (if any), so an explicitly opened file still wins.
+            this.Shown += (s, e) => GetActiveEditor()?.Focus();
         }
 
         private void InitializeComponentCustom()
@@ -611,6 +623,15 @@ namespace nplus
             viewMenu.DropDownItems.Add("Collapse All", null, (s, e) => GetActiveEditor()?.FoldAll(FoldAction.Contract));
             viewMenu.DropDownItems.Add("Expand All", null, (s, e) => GetActiveEditor()?.FoldAll(FoldAction.Expand));
 
+            viewMenu.DropDownItems.Add("-");
+            _multiLineTabsMenuItem = new ToolStripMenuItem("Multi-line Tabs")
+            {
+                CheckOnClick = true,
+                Checked = _multiLineTabs
+            };
+            _multiLineTabsMenuItem.CheckedChanged += (s, e) => ToggleMultiLineTabs(_multiLineTabsMenuItem.Checked);
+            viewMenu.DropDownItems.Add(_multiLineTabsMenuItem);
+
             mainMenu.Items.Add(_fileMenu);
             mainMenu.Items.Add(editMenu);
             mainMenu.Items.Add(viewMenu);
@@ -751,6 +772,16 @@ namespace nplus
             };
             btnAiChat.Click += (s, e) => ToggleChatPanel();
 
+            btnMultiLineTabs = new ToolStripButton()
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                Image = IconFromBase64(_ico_multiline),
+                ToolTipText = "Multi-line Tabs (show all tabs across rows)",
+                CheckOnClick = true,
+                Checked = _multiLineTabs
+            };
+            btnMultiLineTabs.CheckedChanged += (s, e) => ToggleMultiLineTabs(btnMultiLineTabs.Checked);
+
             btnHexToggle = new ToolStripButton()
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image,
@@ -804,7 +835,7 @@ namespace nplus
                 btnSave, btnSaveAll, btnRevert, new ToolStripSeparator(),
                 btnShowChars, btnIndentGuide, btnWordWrap, btnColSelect, new ToolStripSeparator(),
                 btnUndo, btnRecord, btnStopRecord, btnPlayMacro, new ToolStripSeparator(),
-                btnLiveMonitor, btnJsonTree, btnAiChat, btnHexToggle, btnFindInFiles, new ToolStripSeparator(),
+                btnLiveMonitor, btnJsonTree, btnAiChat, btnHexToggle, btnFindInFiles, btnMultiLineTabs, new ToolStripSeparator(),
                 btnThemeToggle, btnHelp
             });
 
@@ -836,7 +867,8 @@ namespace nplus
             {
                 Dock = DockStyle.Fill,
                 DrawMode = System.Windows.Forms.TabDrawMode.OwnerDrawFixed,
-                Padding = new Point(24, 4)
+                Padding = new Point(24, 4),
+                Multiline = _multiLineTabs   // restored from settings; toggle via View menu / toolbar
             };
             tcDocuments.DrawItem += TcDocuments_DrawItem;
             tcDocuments.MouseDown += TcDocuments_MouseDown;
@@ -1500,6 +1532,11 @@ namespace nplus
                     bool folding;
                     if (bool.TryParse(lines[11], out folding)) _foldingEnabled = folding;
                 }
+                if (lines.Length >= 13)
+                {
+                    bool multiTabs;
+                    if (bool.TryParse(lines[12], out multiTabs)) _multiLineTabs = multiTabs;
+                }
             }
             catch { /* Ignore corrupt settings file */ }
         }
@@ -1778,11 +1815,97 @@ namespace nplus
                 _outerSplit.SplitterDistance = Math.Max(100, (int)(_outerSplit.Height * 0.7));
         }
 
+        // Searches every open editor tab (saved or not) and shows the hits in the results
+        // panel. Each result carries its TabPage so double-click navigates to that tab,
+        // including unsaved tabs that have no file path.
+        public void FindAllInOpenTabs(string searchText, bool matchCase, bool wholeWord, bool useRegex, bool useExtended)
+        {
+            if (string.IsNullOrEmpty(searchText)) return;
+
+            if (useExtended)
+                searchText = searchText.Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t").Replace("\\0", "\0");
+
+            RegexOptions regOpts = matchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
+            StringComparison strComp = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            var matchTimeout = TimeSpan.FromSeconds(5);
+            Regex rx = null;
+            try
+            {
+                if (useRegex) rx = new Regex(searchText, regOpts, matchTimeout);
+                else if (wholeWord) rx = new Regex(@"\b" + Regex.Escape(searchText) + @"\b", regOpts, matchTimeout);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Invalid regex: " + ex.Message, "n+", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            _resultsListView.BeginUpdate();
+            _resultsListView.Items.Clear();
+            int hits = 0, tabsMatched = 0;
+
+            foreach (TabPage page in tcDocuments.TabPages)
+            {
+                var editor = page.Controls.Count > 0 ? page.Controls[0] as Scintilla : null;
+                if (editor == null) continue;   // skip hex-view tabs
+
+                string title = page.Text.TrimEnd('*');
+                string[] lines = editor.Text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                bool tabHit = false;
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    bool matched = rx != null ? rx.IsMatch(lines[i]) : lines[i].IndexOf(searchText, strComp) >= 0;
+                    if (!matched) continue;
+
+                    hits++;
+                    if (!tabHit) { tabsMatched++; tabHit = true; }
+
+                    string trimmed = lines[i].Trim();
+                    if (trimmed.Length > 200) trimmed = trimmed.Substring(0, 200) + "...";
+
+                    var item = new ListViewItem(title);
+                    item.SubItems.Add((i + 1).ToString());
+                    item.SubItems.Add(trimmed);
+                    item.Tag = page;   // navigate back to this exact tab
+                    _resultsListView.Items.Add(item);
+                }
+            }
+
+            _resultsListView.EndUpdate();
+            _resultsHeader.Text = $"  Find in Open Tabs — \"{searchText}\" — {hits} hit(s) in {tabsMatched} tab(s)";
+            ApplyResultsPanelTheme();
+
+            _outerSplit.Panel2Collapsed = false;
+            if (_outerSplit.Height > 0)
+                _outerSplit.SplitterDistance = Math.Max(100, (int)(_outerSplit.Height * 0.7));
+        }
+
         private void ResultsListView_DoubleClick(object sender, EventArgs e)
         {
             if (_resultsListView.SelectedItems.Count == 0) return;
 
             var item = _resultsListView.SelectedItems[0];
+
+            // Open-tab results carry their TabPage directly (handles unsaved tabs too).
+            if (item.Tag is TabPage tabRef)
+            {
+                if (!tcDocuments.TabPages.Contains(tabRef))
+                {
+                    MessageBox.Show("That tab has been closed.", "n+", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                tcDocuments.SelectedTab = tabRef;
+                var ed = GetActiveEditor();
+                if (ed != null && int.TryParse(item.SubItems[1].Text, out int ln) && ln > 0 && ln <= ed.Lines.Count)
+                {
+                    ed.GotoPosition(ed.Lines[ln - 1].Position);
+                    ed.Lines[ln - 1].EnsureVisible();
+                    ed.Focus();
+                }
+                return;
+            }
+
             string filePath = item.Text;
             int lineNumber;
             if (!int.TryParse(item.SubItems[1].Text, out lineNumber)) return;
@@ -1902,7 +2025,8 @@ namespace nplus
                     (this.WindowState == FormWindowState.Maximized).ToString(),
                     _zoomLevel.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     _checkForUpdatesOnStartup.ToString(),
-                    _foldingEnabled.ToString()
+                    _foldingEnabled.ToString(),
+                    _multiLineTabs.ToString()
                 });
             }
             catch { /* Ignore write errors */ }
@@ -1965,6 +2089,10 @@ namespace nplus
                 counter++;
             }
 
+            // Record which tab was active so it can be re-focused on next launch. Header
+            // line is skipped by the loader's normal parsing (handled explicitly there).
+            sessionLines.Insert(0, $"*ACTIVE*|{tcDocuments.SelectedIndex}");
+
             try { File.WriteAllLines(_sessionFilePath, sessionLines); } catch { }
         }
 
@@ -1979,6 +2107,14 @@ namespace nplus
 
                 foreach (string line in lines)
                 {
+                    // Header carrying the previously-active tab index (0-based among saved tabs).
+                    if (line.StartsWith("*ACTIVE*", StringComparison.Ordinal))
+                    {
+                        var hp = line.Split('|');
+                        if (hp.Length >= 2) int.TryParse(hp[1], out _startupActiveIndex);
+                        continue;
+                    }
+
                     var parts = line.Split('|');
                     if (parts.Length < 3) continue;
 
@@ -2019,6 +2155,11 @@ namespace nplus
                         tcDocuments.TabPages.RemoveAt(0);
                     }
                 }
+
+                // Re-select the previously-active tab (focus happens in OnShown, once the
+                // window and its child controls can actually take focus).
+                if (_startupActiveIndex >= 0 && _startupActiveIndex < tcDocuments.TabCount)
+                    tcDocuments.SelectedTab = tcDocuments.TabPages[_startupActiveIndex];
             }
             catch { /* Ignore corrupt session file */ }
         }
@@ -3422,6 +3563,23 @@ namespace nplus
                     editor.WrapMode = enable ? WrapMode.Word : WrapMode.None;
                 }
             }
+        }
+
+        // Guards against the menu item and toolbar button bouncing CheckedChanged off each other.
+        private bool _syncingMultiLineTabs;
+
+        private void ToggleMultiLineTabs(bool enable)
+        {
+            _multiLineTabs = enable;
+            tcDocuments.Multiline = enable;
+
+            if (_syncingMultiLineTabs) return;
+            _syncingMultiLineTabs = true;
+            if (_multiLineTabsMenuItem != null) _multiLineTabsMenuItem.Checked = enable;
+            if (btnMultiLineTabs != null) btnMultiLineTabs.Checked = enable;
+            _syncingMultiLineTabs = false;
+
+            SaveSettings();
         }
 
         private void ToggleFolding(bool enable)
