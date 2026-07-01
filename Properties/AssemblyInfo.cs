@@ -30,6 +30,6 @@ using System.Runtime.InteropServices;
 //      Revision
 //
 // Third number maps the suffix letter from the title-bar version (a=1, b=2, c=3, ...).
-// e.g. "2.9b" -> 2.9.2
-[assembly: AssemblyVersion("2.9.2.0")]
-[assembly: AssemblyFileVersion("2.9.2.0")]
+// e.g. "2.9p" -> 2.9.16
+[assembly: AssemblyVersion("2.9.16.0")]
+[assembly: AssemblyFileVersion("2.9.16.0")]

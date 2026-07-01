@@ -395,7 +395,7 @@ namespace nplus
 
         private void InitializeComponentCustom()
         {
-            this.Text = "n+ - V 2.9b";
+            this.Text = "n+ - V 2.9p";
             if (this.StartPosition != FormStartPosition.Manual)
             {
                 this.Size = new Size(1150, 750);
@@ -3165,7 +3165,7 @@ namespace nplus
             var editor = GetActiveEditor();
 
             editor.Text = @"========================================================================
-                 n+ - V 2.9b
+                 n+ - V 2.9p
                  USER'S GUIDE
 ========================================================================
 
