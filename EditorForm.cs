@@ -3600,17 +3600,23 @@ namespace nplus
             SaveSettings();
         }
 
+        // Column (rectangular) selection drag state. When column mode is on, a plain
+        // left-drag builds a rectangular selection via the mouse handlers wired up in
+        // ConfigureScintillaForTab.
+        private bool _colDragging;
+        private int _colAnchorPos;
+
         private void ToggleColumnMode(bool enable)
         {
             btnColSelect.BackColor = enable ? Color.LightSkyBlue : SystemColors.Control;
+            _colDragging = false;
 
             foreach (TabPage page in tcDocuments.TabPages)
             {
-                if (page.Controls[0] is Scintilla editor)
+                if (page.Controls.Count > 0 && page.Controls[0] is Scintilla editor)
                 {
                     editor.MultipleSelection = true;
                     editor.AdditionalSelectionTyping = true;
-                    editor.DirectMessage(2422, new IntPtr(enable ? 1 : 0), IntPtr.Zero);
                 }
             }
         }
@@ -4829,7 +4835,28 @@ namespace nplus
 
             editor.MultipleSelection = true;
             editor.AdditionalSelectionTyping = true;
-            editor.DirectMessage(2422, new IntPtr(btnColSelect.Checked ? 1 : 0), IntPtr.Zero);
+
+            // Column selection mode: Scintilla only does rectangular MOUSE selection when
+            // Alt is held (SCI_SETSELECTIONMODE affects the keyboard and is cancelled by a
+            // click). So when the toggle is on we drive the rectangular selection directly
+            // from the mouse drag — no Alt needed.
+            editor.MouseDown += (s, e) =>
+            {
+                if (!btnColSelect.Checked || e.Button != MouseButtons.Left) return;
+                var ed = (Scintilla)s;
+                _colAnchorPos = ed.CharPositionFromPoint(e.X, e.Y);
+                _colDragging = true;
+                ed.SetEmptySelection(_colAnchorPos);
+            };
+            editor.MouseMove += (s, e) =>
+            {
+                if (!_colDragging || (e.Button & MouseButtons.Left) == 0) return;
+                var ed = (Scintilla)s;
+                int pos = ed.CharPositionFromPoint(e.X, e.Y);
+                ed.RectangularSelectionAnchor = _colAnchorPos;
+                ed.RectangularSelectionCaret = pos;
+            };
+            editor.MouseUp += (s, e) => { _colDragging = false; };
 
             ApplySyntaxHighlighting(editor, editor.Tag as string);
 
