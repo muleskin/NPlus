@@ -5796,6 +5796,11 @@ namespace nplus
             ShowInTaskbar = false;
             ClientSize = new Size(460, 140);
 
+            // The prompt is non-modal (other tabs stay usable), so without this it can sit
+            // at the same z-order as the main window and get buried. Float it above every
+            // window until the user answers.
+            TopMost = true;
+
             var label = new Label
             {
                 Text = $"The file \"{fileName}\" has been modified by another program.\n\nWhat would you like to do?",
@@ -5819,6 +5824,15 @@ namespace nplus
             Controls.Add(btnIgnore);
             AcceptButton = btnReload;
             CancelButton = btnIgnore;
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            // Force it in front and give it focus even when n+ isn't the foreground app.
+            BringToFront();
+            Activate();
+            Focus();
         }
     }
 }
